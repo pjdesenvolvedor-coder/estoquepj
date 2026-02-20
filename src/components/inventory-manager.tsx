@@ -145,14 +145,14 @@ export function InventoryManager() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Search and Top Actions Bar */}
       <div className="flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="Buscar e-mail ou serviço..." 
-            className="pl-10 h-11"
+            className="pl-10 h-11 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -187,7 +187,7 @@ export function InventoryManager() {
 
       {/* Stock Alerts Area */}
       {outOfStockServices.length > 0 && (
-        <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive animate-in fade-in slide-in-from-top-2">
+        <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle className="font-bold">Atenção!</AlertTitle>
           <AlertDescription className="text-sm">
@@ -203,8 +203,8 @@ export function InventoryManager() {
         </Alert>
       )}
 
-      {/* Status Filters - Scrollable on mobile */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
+      {/* Status Filters - Fixed to prevent horizontal scroll issues */}
+      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar w-full">
         <Button 
           variant={filterStatus === 'all' ? 'default' : 'outline'} 
           size="sm"
@@ -232,21 +232,21 @@ export function InventoryManager() {
       </div>
 
       {/* Inventory Grid */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
         {filteredItems.map((item) => (
           <Card key={item.id} className={`group hover:shadow-md transition-all border-l-4 ${item.status === 'available' ? 'border-l-green-500' : 'border-l-gray-400 opacity-80'}`}>
             <CardHeader className="p-4 pb-2">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start gap-2">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-primary/10 rounded-lg text-primary">
+                  <div className="p-2.5 bg-primary/10 rounded-lg text-primary shrink-0">
                     {getServiceIcon(item.service)}
                   </div>
-                  <div>
-                    <CardTitle className="text-base font-headline">{item.service}</CardTitle>
+                  <div className="min-w-0">
+                    <CardTitle className="text-base font-headline truncate">{item.service}</CardTitle>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-tight">ID: {item.id.slice(0, 8)}</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1.5">
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <Badge variant={item.status === 'available' ? 'default' : 'secondary'} className={`text-[10px] px-2 py-0 ${item.status === 'available' ? 'bg-green-600' : ''}`}>
                     {item.status === 'available' ? 'Disponível' : 'Vendido'}
                   </Badge>
@@ -260,14 +260,14 @@ export function InventoryManager() {
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-2 space-y-4">
-              <div className="bg-muted p-3 rounded-lg text-sm break-all font-mono space-y-3 border border-border/50">
+              <div className="bg-muted p-3 rounded-lg text-sm break-all font-mono space-y-3 border border-border/50 overflow-hidden">
                 <div className="space-y-0.5">
                   <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">E-mail</p>
-                  <p className="leading-tight">{item.account}</p>
+                  <p className="leading-tight break-all">{item.account}</p>
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">Senha</p>
-                  <p className="leading-tight">{item.credentials}</p>
+                  <p className="leading-tight break-all">{item.credentials}</p>
                 </div>
               </div>
 
@@ -308,7 +308,7 @@ export function InventoryManager() {
       </div>
 
       {filteredItems.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-xl border border-dashed mx-auto max-w-lg px-4">
+        <div className="text-center py-16 bg-white rounded-xl border border-dashed mx-auto w-full max-w-lg px-4">
           <div className="mx-auto bg-muted w-14 h-14 rounded-full flex items-center justify-center mb-4 text-muted-foreground">
             <LayoutGrid className="w-7 h-7" />
           </div>
