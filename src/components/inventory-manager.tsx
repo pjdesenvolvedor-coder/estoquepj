@@ -23,7 +23,8 @@ import {
   ExternalLink,
   Settings2,
   AlertTriangle,
-  History
+  History,
+  BarChart3
 } from 'lucide-react';
 import { 
   Card, 
@@ -36,6 +37,7 @@ import { EditItemDialog } from './edit-item-dialog';
 import { WithdrawAccessDialog } from './withdraw-access-dialog';
 import { SettingsDialog } from './settings-dialog';
 import { HistoryDialog } from './history-dialog';
+import { StatsDialog } from './stats-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const DEFAULT_SERVICES = ['Netflix', 'Disney+', 'HBO Max', 'Prime Video', 'Spotify', 'Youtube', 'Crunchyroll'];
@@ -50,6 +52,7 @@ export function InventoryManager() {
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
@@ -187,6 +190,15 @@ export function InventoryManager() {
           </Button>
           <Button 
             variant="outline" 
+            onClick={() => setIsStatsOpen(true)}
+            className="h-11 w-full sm:w-auto border-secondary text-secondary hover:bg-secondary/5"
+            title="Quantidade em Estoque"
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Quantidade
+          </Button>
+          <Button 
+            variant="outline" 
             onClick={() => setIsWithdrawOpen(true)} 
             className="col-span-2 sm:flex-1 border-primary text-primary hover:bg-primary/5 h-11"
           >
@@ -291,11 +303,8 @@ export function InventoryManager() {
             <CardContent className="p-4 pt-2 space-y-4">
               <div className="bg-muted p-3 rounded-lg text-sm break-all font-mono space-y-3 border border-border/50 overflow-hidden">
                 <div className="space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">E-mail</p>
-                  <p className="leading-tight break-all">{item.account}</p>
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">Senha</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">E-mail / Senha</p>
+                  <p className="leading-tight break-all font-bold">{item.account}</p>
                   <p className="leading-tight break-all">{item.credentials}</p>
                 </div>
               </div>
@@ -388,6 +397,13 @@ export function InventoryManager() {
         onOpenChange={setIsHistoryOpen}
         history={history}
         onClearHistory={clearHistory}
+      />
+
+      <StatsDialog
+        open={isStatsOpen}
+        onOpenChange={setIsStatsOpen}
+        items={items}
+        services={services}
       />
     </div>
   );
