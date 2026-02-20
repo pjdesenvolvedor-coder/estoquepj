@@ -35,8 +35,8 @@ export function HistoryDialog({ open, onOpenChange, history, onClearHistory }: H
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] p-4 sm:p-6 max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] sm:max-w-[500px] p-4 sm:p-6 h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-primary" />
             Histórico de Retiradas
@@ -46,62 +46,65 @@ export function HistoryDialog({ open, onOpenChange, history, onClearHistory }: H
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 mt-4 pr-3">
-          <div className="space-y-4">
-            {history.length > 0 ? (
-              history.map((entry) => (
-                <div key={entry.id} className="p-4 border rounded-lg bg-muted/30 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-primary">{entry.service}</h4>
-                      <p className="text-xs text-muted-foreground font-mono">{entry.account}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium uppercase">
-                        <Calendar className="w-3 h-3" />
-                        {format(entry.timestamp, "dd/MM/yyyy", { locale: ptBR })}
+        <div className="flex-1 overflow-hidden my-4 border rounded-lg bg-muted/10">
+          <ScrollArea className="h-full w-full">
+            <div className="p-4 space-y-4">
+              {history.length > 0 ? (
+                history.map((entry) => (
+                  <div key={entry.id} className="p-3 border rounded-lg bg-white shadow-sm space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-primary truncate">{entry.service}</h4>
+                        <p className="text-[10px] text-muted-foreground font-mono truncate">{entry.account}</p>
                       </div>
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium uppercase justify-end">
-                        <Clock className="w-3 h-3" />
-                        {format(entry.timestamp, "HH:mm", { locale: ptBR })}
+                      <div className="text-right shrink-0 ml-2">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium uppercase justify-end">
+                          <Calendar className="w-3 h-3" />
+                          {format(entry.timestamp, "dd/MM/yy", { locale: ptBR })}
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium uppercase justify-end">
+                          <Clock className="w-3 h-3" />
+                          {format(entry.timestamp, "HH:mm", { locale: ptBR })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="bg-white p-2 rounded border text-[11px] font-mono whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
-                    {entry.message}
-                  </div>
+                    
+                    <div className="bg-muted p-2 rounded border text-[11px] font-mono whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
+                      {entry.message}
+                    </div>
 
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full h-8 text-[11px]" 
-                    onClick={() => copyMessage(entry.message)}
-                  >
-                    <Copy className="w-3 h-3 mr-2" />
-                    Copiar Mensagem Novamente
-                  </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full h-8 text-[11px]" 
+                      onClick={() => copyMessage(entry.message)}
+                    >
+                      <Copy className="w-3 h-3 mr-2" />
+                      Copiar Mensagem
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-20 text-muted-foreground text-sm">
+                  Nenhuma venda registrada no histórico.
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-10 text-muted-foreground text-sm">
-                Nenhuma venda registrada no histórico.
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
 
-        <DialogFooter className="mt-4 gap-2 flex flex-col sm:flex-row">
+        <DialogFooter className="shrink-0 pt-2 gap-2 flex flex-col sm:flex-row border-t mt-auto">
           <Button 
             variant="ghost" 
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            size="sm"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 order-2 sm:order-1"
             onClick={handleClear}
             disabled={history.length === 0}
           >
             <Trash2 className="w-4 h-4 mr-2" />
-            Limpar Histórico
+            Limpar Tudo
           </Button>
-          <Button onClick={() => onOpenChange(false)} className="flex-1">Fechar</Button>
+          <Button onClick={() => onOpenChange(false)} className="h-10 flex-1 order-1 sm:order-2">Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
