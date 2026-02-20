@@ -182,7 +182,6 @@ export function InventoryManager() {
                   </div>
                   <div>
                     <CardTitle className="text-lg font-headline">{item.service}</CardTitle>
-                    <CardDescription className="font-mono text-xs">{item.account}</CardDescription>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
@@ -204,9 +203,15 @@ export function InventoryManager() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-muted p-3 rounded-md text-sm break-all font-mono">
-                <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Senha</p>
-                {item.credentials}
+              <div className="bg-muted p-3 rounded-md text-sm break-all font-mono space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">E-mail</p>
+                  {item.account}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Senha</p>
+                  {item.credentials}
+                </div>
               </div>
 
               <div className="flex justify-between pt-2">
