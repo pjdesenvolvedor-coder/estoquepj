@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * SECURE PROTOTYPING RULES - STOCK MANAGEMENT SYSTEM
+     * 
+     * CORE PHILOSOPHY:
+     * This ruleset implements a strict user-ownership model. The application is designed for personal
+     * use where data is siloed per user. Security is enforced by ensuring that the authenticated 
+     * User ID (UID) matches the top-level document path (/users/{userId}).
+     * 
+     * DATA STRUCTURE:
+     * All application data is organized hierarchically:
+     * /users/{userId} -> The root user profile.
+     * /users/{userId}/serviceTypes/{serviceTypeId} -> Categories of services (e.g., Netflix).
+     * /users/{userId}/serviceTypes/{serviceTypeId}/digitalAccessCredentials/{credentialId} -> Individual logins.
+     * 
+     * KEY SECURITY DECISIONS:
+     * 1. Path-Based Authorization: We rely on the {userId} wildcard in the path to authorize all requests.
+     *    This avoids expensive get() calls to parent documents.
+     * 2. Strict Ownership: Only the owner of a data tree can read, list, create, or modify data within it.
+     * 3. Flexible Schema: During this prototyping phase, we do not enforce strict field types or 
+     *    required fields, except for those critical to maintaining relational integrity (IDs and links).
+     * 4. Relational Integrity: We enforce that internal 'id' and 'serviceTypeId' fields match the 
+     *    document path during creation and remain immutable during updates.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /** @description Checks if the request is made by an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** @description Checks if the authenticated user matches the provided userId. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** @description Combined check for ownership and document existence for updates/deletes. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for the root user document. Enables self-provisioning.
+     * @path /users/{userId}
+     * @allow Authenticated user 'abc' creating/reading document '/users/abc'.
+     * @deny User 'abc' attempting to access '/users/xyz'.
+     * @principle Ownership and Self-Creation.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update, delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for Service Types (e.g., Netflix, Disney+).
+       * @path /users/{userId}/serviceTypes/{serviceTypeId}
+       * @allow User 'abc' listing their own service types.
+       * @deny User 'abc' updating a service type owned by 'xyz'.
+       * @principle Path-based ownership and relational integrity.
+       */
+      match /serviceTypes/{serviceTypeId} {
+        allow get, list: if isOwner(userId);
+        
+        // Enforce that the internal 'id' matches the document path ID.
+        allow create: if isOwner(userId) && request.resource.data.id == serviceTypeId;
+        
+        // Ensure the ID cannot be changed to prevent orphans.
+        allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+        
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description Rules for sensitive Digital Access Credentials (usernames/passwords).
+         * @path /users/{userId}/serviceTypes/{serviceTypeId}/digitalAccessCredentials/{credentialId}
+         * @allow Owner 'abc' adding a new password to their Netflix service type.
+         * @deny Anyone reading credentials without matching the owner userId in the path.
+         * @principle Deeply nested ownership and relational immutability.
+         */
+        match /digitalAccessCredentials/{credentialId} {
+          allow get, list: if isOwner(userId);
+          
+          // Enforce consistency between path and internal data links.
+          allow create: if isOwner(userId) && request.resource.data.id == credentialId && request.resource.data.serviceTypeId == serviceTypeId;
+          
+          // Prevent re-assigning credentials to different service types or IDs.
+          allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id && request.resource.data.serviceTypeId == resource.data.serviceTypeId;
+          
+          allow delete: if isExistingOwner(userId);
+        }
+      }
+    }
+  }
+}

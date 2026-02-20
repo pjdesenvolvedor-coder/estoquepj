@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "ServiceType": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ServiceType",
+      "type": "object",
+      "description": "Represents a category or type of digital access service, such as 'Netflix Premium' or 'Disney+ Basic'. This acts as the 'product' definition for which credentials are stocked.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ServiceType entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The human-readable name of the service type (e.g., 'Netflix Premium', 'Disney+ Standard')."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional detailed description of the service type, including features or specifications."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this service type was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this service type was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DigitalAccessCredential": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DigitalAccessCredential",
+      "type": "object",
+      "description": "Represents a single, unique digital access credential (e.g., a specific username and password) for a given service type, which forms an individual stock item in the inventory.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DigitalAccessCredential entity."
+        },
+        "serviceTypeId": {
+          "type": "string",
+          "description": "Reference to the ServiceType this credential belongs to. (Relationship: ServiceType 1:N DigitalAccessCredential)"
+        },
+        "username": {
+          "type": "string",
+          "description": "The username or email used for logging into the digital access service."
+        },
+        "credentialValue": {
+          "type": "string",
+          "description": "The password, access key, or other sensitive value required to access the service. Note: For personal use as requested, this field stores sensitive information directly."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current availability status of the credential (e.g., 'Available', 'Used', 'Expired', 'Suspended')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or details about this specific access credential, potentially enhanced by AI suggestions."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this credential was added to the stock.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this credential's details were last updated.",
+          "format": "date-time"
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time this credential was reported as used, if applicable.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "serviceTypeId",
+        "username",
+        "credentialValue",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "user",
+          "schema": {
+            "$ref": "#/backend/entities/user"
+          },
+          "description": "Root collection for all data owned by a specific user. This path facilitates path-based ownership for secure data segregation. The 'user' entity is implicit via Firebase Authentication's UID, and a basic user profile document can reside here if needed.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the authenticated user (Firebase Auth UID)."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/serviceTypes/{serviceTypeId}",
+        "definition": {
+          "entityName": "ServiceType",
+          "schema": {
+            "$ref": "#/backend/entities/ServiceType"
+          },
+          "description": "Stores definitions of various digital access service types, privately owned by a specific user. Authorization is secured by the parent 'userId' in the path, ensuring Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this service type."
+            },
+            {
+              "name": "serviceTypeId",
+              "description": "The unique identifier for the ServiceType entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/serviceTypes/{serviceTypeId}/digitalAccessCredentials/{credentialId}",
+        "definition": {
+          "entityName": "DigitalAccessCredential",
+          "schema": {
+            "$ref": "#/backend/entities/DigitalAccessCredential"
+          },
+          "description": "Stores individual digital access credentials belonging to a specific ServiceType and privately owned by a user. Each document MUST include a denormalized 'ownerId' field (matching the 'userId' from the path) to support Authorization Independence and secure Collection Group Queries (QAPs).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this digital access credential."
+            },
+            {
+              "name": "serviceTypeId",
+              "description": "The unique identifier of the parent ServiceType to which this credential belongs."
+            },
+            {
+              "name": "credentialId",
+              "description": "The unique identifier for the DigitalAccessCredential entity."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed following core principles of Authorization Independence, Structural Segregation, and Hierarchical Access Modeling, even for a personal-use system with simplified initial security requirements. The fundamental approach is to nest all user-owned data under a unique user ID, leveraging Firebase Authentication's `request.auth.uid`.\n\n**Authorization Independence:** All collections are structured hierarchically under `/users/{userId}`. `ServiceType` documents are stored at `/users/{userId}/serviceTypes/{serviceTypeId}`. `DigitalAccessCredential` documents are further nested under their respective `ServiceType`s at `/users/{userId}/serviceTypes/{serviceTypeId}/digitalAccessCredentials/{credentialId}`. This nesting ensures that the owner's `userId` and the parent `serviceTypeId` are explicitly part of every document's path. Consequently, Firebase Security Rules can authorize access by simply checking `request.auth.uid == userId` against the path wildcards, eliminating the need for expensive and complex `get()` operations to check parent document ownership or attributes. For example, creating a `DigitalAccessCredential` only requires verifying the `userId` in the path matches the authenticated user, without needing to fetch the parent `ServiceType` document.\n\nTo further enhance Authorization Independence and support Collection Group Queries (QAPs), the `DigitalAccessCredential` documents **must include a denormalized `ownerId` field (matching the `userId` from the path)**. While the path provides `userId` for direct access rules, collection group queries (e.g., listing all credentials for a user across all service types) do not have access to path parameters. Storing `ownerId` directly within each credential document allows for simple and efficient collection group security rules like `allow list: if request.auth.uid == resource.data.ownerId;`.\n\n**Structural Segregation (QAPs):** All documents within `/users/{userId}/serviceTypes` share the same security posture (owned by the `userId` in the path). Similarly, all documents within `/users/{userId}/serviceTypes/{serviceTypeId}/digitalAccessCredentials` share the same security posture. This segregation by ownership ensures that `list` operations (Queries with Authorized Paths - QAPs) are inherently secure and efficient. A query to list service types for a user (`/users/{userId}/serviceTypes`) will only return documents owned by that user, as enforced by simple path-based rules. The same applies to listing credentials for a specific service type. This structure minimizes the risk of inadvertently exposing unauthorized data or requiring complex, inefficient rule logic to filter results.\n\nWhile the user requested to remove security rules, this structure *enables* robust, simple, and debuggable security rules when they are eventually implemented, ensuring data integrity and access control for personal use. The fixed password approach implies a single authenticated user (`request.auth.uid`) behind that password, making path-based ownership the most fitting model."
+  }
+}
