@@ -29,7 +29,6 @@ import {
   CardContent, 
   CardHeader, 
   CardTitle, 
-  CardDescription 
 } from '@/components/ui/card';
 import { AddItemDialog } from './add-item-dialog';
 import { EditItemDialog } from './edit-item-dialog';
@@ -90,7 +89,9 @@ export function InventoryManager() {
   };
 
   const deleteItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
+    if (window.confirm('Tem certeza que deseja excluir esta conta?')) {
+      setItems(items.filter(item => item.id !== id));
+    }
   };
 
   const toggleStatus = (id: string) => {
@@ -145,43 +146,55 @@ export function InventoryManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl shadow-sm border">
-        <div className="relative w-full sm:max-w-md">
+      {/* Search and Top Actions Bar */}
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Buscar por e-mail ou serviço..." 
-            className="pl-10"
+            placeholder="Buscar e-mail ou serviço..." 
+            className="pl-10 h-11"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="outline" size="icon" onClick={handleLogout} title="Sair" className="shrink-0">
-            <LogOut className="w-4 h-4" />
+        
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full">
+          <Button variant="outline" size="icon" onClick={handleLogout} title="Sair" className="h-11 w-full sm:w-11">
+            <LogOut className="w-4 h-4 mr-2 sm:mr-0" />
+            <span className="sm:hidden">Sair</span>
           </Button>
-          <Button variant="outline" size="icon" onClick={() => setIsSettingsOpen(true)} title="Configurações" className="shrink-0">
-            <Settings2 className="w-4 h-4" />
+          <Button variant="outline" size="icon" onClick={() => setIsSettingsOpen(true)} title="Configurações" className="h-11 w-full sm:w-11">
+            <Settings2 className="w-4 h-4 mr-2 sm:mr-0" />
+            <span className="sm:hidden">Configurar</span>
           </Button>
-          <Button variant="outline" onClick={() => setIsWithdrawOpen(true)} className="flex-1 sm:flex-none border-primary text-primary hover:bg-primary/5">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsWithdrawOpen(true)} 
+            className="col-span-2 sm:flex-1 border-primary text-primary hover:bg-primary/5 h-11"
+          >
             <ExternalLink className="w-4 h-4 mr-2" />
             Retirar Acesso
           </Button>
-          <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none">
+          <Button 
+            onClick={() => setIsAddOpen(true)} 
+            className="col-span-2 sm:flex-1 h-11"
+          >
             <Plus className="w-4 h-4 mr-2" />
             Adicionar Estoque
           </Button>
         </div>
       </div>
 
+      {/* Stock Alerts Area */}
       {outOfStockServices.length > 0 && (
         <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive animate-in fade-in slide-in-from-top-2">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle className="font-bold">Aviso de Estoque!</AlertTitle>
+          <AlertTitle className="font-bold">Atenção!</AlertTitle>
           <AlertDescription className="text-sm">
-            Os seguintes serviços estão <span className="font-bold underline">SEM ESTOQUE</span> disponível: 
-            <div className="flex flex-wrap gap-2 mt-2">
+            Serviços <span className="font-bold underline">SEM ESTOQUE</span>:
+            <div className="flex flex-wrap gap-1.5 mt-2">
               {outOfStockServices.map(s => (
-                <Badge key={s} variant="destructive" className="font-normal">
+                <Badge key={s} variant="destructive" className="font-normal px-2 py-0.5">
                   {s}
                 </Badge>
               ))}
@@ -190,11 +203,13 @@ export function InventoryManager() {
         </Alert>
       )}
 
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      {/* Status Filters - Scrollable on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
         <Button 
           variant={filterStatus === 'all' ? 'default' : 'outline'} 
           size="sm"
           onClick={() => setFilterStatus('all')}
+          className="whitespace-nowrap shrink-0"
         >
           Todos ({items.length})
         </Button>
@@ -202,7 +217,7 @@ export function InventoryManager() {
           variant={filterStatus === 'available' ? 'default' : 'outline'} 
           size="sm"
           onClick={() => setFilterStatus('available')}
-          className={filterStatus === 'available' ? 'bg-green-600 hover:bg-green-700 border-none' : ''}
+          className={`whitespace-nowrap shrink-0 ${filterStatus === 'available' ? 'bg-green-600 hover:bg-green-700 border-none' : ''}`}
         >
           Disponíveis ({items.filter(i => i.status === 'available').length})
         </Button>
@@ -210,65 +225,81 @@ export function InventoryManager() {
           variant={filterStatus === 'used' ? 'default' : 'outline'} 
           size="sm"
           onClick={() => setFilterStatus('used')}
+          className="whitespace-nowrap shrink-0"
         >
-          Vendidos/Usados ({items.filter(i => i.status === 'used').length})
+          Vendidos ({items.filter(i => i.status === 'used').length})
         </Button>
       </div>
 
+      {/* Inventory Grid */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {filteredItems.map((item) => (
-          <Card key={item.id} className={`group hover:shadow-md transition-all border-l-4 ${item.status === 'available' ? 'border-l-green-500' : 'border-l-gray-400 opacity-75'}`}>
-            <CardHeader className="pb-2">
+          <Card key={item.id} className={`group hover:shadow-md transition-all border-l-4 ${item.status === 'available' ? 'border-l-green-500' : 'border-l-gray-400 opacity-80'}`}>
+            <CardHeader className="p-4 pb-2">
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-primary/10 rounded-lg text-primary">
                     {getServiceIcon(item.service)}
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-headline">{item.service}</CardTitle>
+                    <CardTitle className="text-base font-headline">{item.service}</CardTitle>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-tight">ID: {item.id.slice(0, 8)}</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Badge variant={item.status === 'available' ? 'default' : 'secondary'} className={item.status === 'available' ? 'bg-green-600' : ''}>
+                <div className="flex flex-col items-end gap-1.5">
+                  <Badge variant={item.status === 'available' ? 'default' : 'secondary'} className={`text-[10px] px-2 py-0 ${item.status === 'available' ? 'bg-green-600' : ''}`}>
                     {item.status === 'available' ? 'Disponível' : 'Vendido'}
                   </Badge>
                   {item.profiles && (
-                    <Badge variant="outline" className="flex flex-col gap-0.5 items-end border-secondary text-secondary">
-                      <div className="flex gap-1 items-center">
-                        <Users className="w-3 h-3" />
-                        {item.profiles} perfis
-                      </div>
-                      <div className="text-[10px] opacity-70">
-                        {item.profilesUsed || 0} vendidos
-                      </div>
+                    <Badge variant="outline" className="flex gap-1 items-center border-secondary/30 text-secondary text-[10px] px-2 py-0">
+                      <Users className="w-3 h-3" />
+                      {item.profilesUsed || 0}/{item.profiles}
                     </Badge>
                   )}
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-muted p-3 rounded-md text-sm break-all font-mono space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">E-mail</p>
-                  {item.account}
+            <CardContent className="p-4 pt-2 space-y-4">
+              <div className="bg-muted p-3 rounded-lg text-sm break-all font-mono space-y-3 border border-border/50">
+                <div className="space-y-0.5">
+                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">E-mail</p>
+                  <p className="leading-tight">{item.account}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Senha</p>
-                  {item.credentials}
+                <div className="space-y-0.5">
+                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">Senha</p>
+                  <p className="leading-tight">{item.credentials}</p>
                 </div>
               </div>
 
-              <div className="flex justify-between pt-2">
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => toggleStatus(item.id)} title={item.status === 'available' ? 'Marcar como Usado' : 'Marcar como Disponível'}>
-                    {item.status === 'available' ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <XCircle className="w-4 h-4 text-orange-400" />}
+              <div className="flex justify-between items-center pt-1">
+                <div className="flex gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => toggleStatus(item.id)} 
+                    className="h-9 w-9"
+                    title={item.status === 'available' ? 'Marcar como Usado' : 'Marcar como Disponível'}
+                  >
+                    {item.status === 'available' ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-orange-400" />}
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)} title="Editar">
-                    <Edit3 className="w-4 h-4" />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setEditingItem(item)} 
+                    className="h-9 w-9"
+                    title="Editar"
+                  >
+                    <Edit3 className="w-5 h-5" />
                   </Button>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => deleteItem(item.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10" title="Excluir">
-                  <Trash2 className="w-4 h-4" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => deleteItem(item.id)} 
+                  className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10" 
+                  title="Excluir"
+                >
+                  <Trash2 className="w-5 h-5" />
                 </Button>
               </div>
             </CardContent>
@@ -277,18 +308,18 @@ export function InventoryManager() {
       </div>
 
       {filteredItems.length === 0 && (
-        <div className="text-center py-20 bg-white rounded-xl border border-dashed">
-          <div className="mx-auto bg-muted w-16 h-16 rounded-full flex items-center justify-center mb-4 text-muted-foreground">
-            <LayoutGrid className="w-8 h-8" />
+        <div className="text-center py-16 bg-white rounded-xl border border-dashed mx-auto max-w-lg px-4">
+          <div className="mx-auto bg-muted w-14 h-14 rounded-full flex items-center justify-center mb-4 text-muted-foreground">
+            <LayoutGrid className="w-7 h-7" />
           </div>
-          <h3 className="text-xl font-medium">Nenhum item encontrado</h3>
-          <p className="text-muted-foreground">Tente mudar o filtro ou adicionar um novo produto.</p>
-          <div className="flex gap-2 justify-center mt-4">
-            <Button onClick={() => setIsWithdrawOpen(true)} variant="outline">
+          <h3 className="text-lg font-medium">Nenhum item encontrado</h3>
+          <p className="text-sm text-muted-foreground mt-1">Refine sua busca ou adicione novos produtos ao estoque.</p>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center mt-6">
+            <Button onClick={() => setIsWithdrawOpen(true)} variant="outline" className="h-11">
               Retirar Acesso
             </Button>
-            <Button onClick={() => setIsAddOpen(true)} variant="outline">
-              Adicionar Primeiro Item
+            <Button onClick={() => setIsAddOpen(true)} className="h-11">
+              Adicionar Item
             </Button>
           </div>
         </div>

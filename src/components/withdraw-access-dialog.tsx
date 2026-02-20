@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { InventoryItem, ServiceType } from '@/lib/types';
-import { Copy, AlertCircle, Sparkles } from 'lucide-react';
+import { InventoryItem } from '@/lib/types';
+import { Copy, AlertCircle, Sparkles, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -29,7 +29,6 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, se
     return items.filter(item => item.status === 'available');
   }, [items]);
 
-  // Apenas serviços que existem nas configurações E possuem estoque
   const activeUniqueServices = useMemo(() => {
     const servicesInStock = availableItems.map(item => item.service);
     return services.filter(s => servicesInStock.includes(s));
@@ -61,15 +60,22 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, se
   };
 
   const handleCopyAndFinish = () => {
-    navigator.clipboard.writeText(generatedMessage);
-    if (selectedItemId) {
-      onWithdraw(selectedItemId);
-    }
-    toast({
-      title: "Sucesso!",
-      description: "Mensagem copiada e retirada registrada.",
+    navigator.clipboard.writeText(generatedMessage).then(() => {
+      if (selectedItemId) {
+        onWithdraw(selectedItemId);
+      }
+      toast({
+        title: "Copiado!",
+        description: "Acesso retirado e estoque atualizado.",
+      });
+      resetAndClose();
+    }).catch(() => {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível copiar para a área de transferência.",
+      });
     });
-    resetAndClose();
   };
 
   const resetAndClose = () => {
@@ -82,21 +88,21 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, se
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="w-[95vw] sm:max-w-[450px] p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Retirar Acesso</DialogTitle>
           <DialogDescription>
-            O sistema escolherá automaticamente a conta mais antiga disponível.
+            Sistema automático: pega a conta disponível mais antiga.
           </DialogDescription>
         </DialogHeader>
 
         {!generatedMessage ? (
           <div className="space-y-5 py-4">
             <div className="space-y-2">
-              <Label>Serviço</Label>
+              <Label>Selecione o Serviço</Label>
               <Select value={selectedService} onValueChange={(val) => setSelectedService(val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha o serviço..." />
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Escolha..." />
                 </SelectTrigger>
                 <SelectContent>
                   {activeUniqueServices.length > 0 ? (
@@ -104,27 +110,29 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, se
                       <SelectItem key={service} value={service}>{service}</SelectItem>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-muted-foreground text-center">Nenhum serviço disponível com estoque</div>
+                    <div className="p-4 text-sm text-muted-foreground text-center">
+                      Sem estoque disponível.
+                    </div>
                   )}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Tipo de Entrega</Label>
+              <Label>Finalidade</Label>
               <Select value={isSupport} onValueChange={(val) => setIsSupport(val as 'no' | 'yes')}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="no">Venda Comum</SelectItem>
+                  <SelectItem value="no">Venda Nova</SelectItem>
                   <SelectItem value="yes">Suporte / Reposição</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <Button 
-              className="w-full h-11 bg-primary hover:bg-primary/90" 
+              className="w-full h-12 bg-primary hover:bg-primary/90 mt-4" 
               disabled={!selectedService} 
               onClick={handleGenerate}
             >
@@ -133,33 +141,36 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, se
             </Button>
           </div>
         ) : (
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-4">
             <div className="space-y-2">
-              <Label>Mensagem Pronta para Enviar:</Label>
+              <Label className="text-sm font-semibold">Mensagem de Entrega:</Label>
               <Textarea 
                 readOnly 
                 value={generatedMessage} 
-                className="h-48 font-mono text-sm resize-none bg-muted border-primary/20"
+                className="h-48 font-mono text-xs sm:text-sm resize-none bg-muted border-primary/20 leading-relaxed"
               />
             </div>
-            <div className="flex items-start gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg text-xs text-primary">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <p>Ao copiar, o estoque será atualizado automaticamente.</p>
+            <div className="flex items-start gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg text-[11px] text-primary">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <p>Ao copiar, o perfil/conta será marcado como vendido automaticamente.</p>
             </div>
           </div>
         )}
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
           {generatedMessage ? (
             <>
-              <Button variant="outline" onClick={() => setGeneratedMessage('')} className="flex-1">Trocar Conta</Button>
-              <Button onClick={handleCopyAndFinish} className="flex-1 bg-green-600 hover:bg-green-700">
+              <Button variant="outline" onClick={() => setGeneratedMessage('')} className="w-full sm:flex-1 h-11">
+                <RefreshCcw className="w-4 h-4 mr-2" />
+                Trocar Conta
+              </Button>
+              <Button onClick={handleCopyAndFinish} className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 h-11">
                 <Copy className="w-4 h-4 mr-2" />
-                Copiar e Finalizar
+                Copiar e Baixar
               </Button>
             </>
           ) : (
-            <Button variant="outline" onClick={resetAndClose} className="w-full">Cancelar</Button>
+            <Button variant="outline" onClick={resetAndClose} className="w-full h-11">Cancelar</Button>
           )}
         </DialogFooter>
       </DialogContent>

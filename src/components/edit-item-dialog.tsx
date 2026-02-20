@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ServiceType, InventoryItem } from '@/lib/types';
+import { InventoryItem } from '@/lib/types';
 
 interface EditItemDialogProps {
   item: InventoryItem | null;
@@ -16,7 +16,7 @@ interface EditItemDialogProps {
 }
 
 export function EditItemDialog({ item, onOpenChange, onSubmit, services }: EditItemDialogProps) {
-  const [service, setService] = useState<ServiceType>('');
+  const [service, setService] = useState('');
   const [account, setAccount] = useState('');
   const [credentials, setCredentials] = useState('');
   const [status, setStatus] = useState<'available' | 'used'>('available');
@@ -51,17 +51,17 @@ export function EditItemDialog({ item, onOpenChange, onSubmit, services }: EditI
 
   return (
     <Dialog open={!!item} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[95vw] sm:max-w-[450px] p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Editar Acesso</DialogTitle>
           <DialogDescription>Modifique os dados desta conta digital.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-service" className="text-right">Serviço</Label>
-            <div className="col-span-3">
+        <form onSubmit={handleSubmit} className="space-y-5 py-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-service">Serviço</Label>
               <Select value={service} onValueChange={(val) => setService(val)}>
-                <SelectTrigger id="edit-service">
+                <SelectTrigger id="edit-service" className="h-11">
                   <SelectValue placeholder="Selecione o serviço" />
                 </SelectTrigger>
                 <SelectContent>
@@ -71,32 +71,34 @@ export function EditItemDialog({ item, onOpenChange, onSubmit, services }: EditI
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-account" className="text-right">E-mail</Label>
-            <Input 
-              id="edit-account" 
-              className="col-span-3" 
-              value={account} 
-              onChange={(e) => setAccount(e.target.value)} 
-              required 
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-credentials" className="text-right">Senha</Label>
-            <Input 
-              id="edit-credentials" 
-              className="col-span-3" 
-              value={credentials} 
-              onChange={(e) => setCredentials(e.target.value)} 
-              required 
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-status" className="text-right">Status</Label>
-            <div className="col-span-3">
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-account">E-mail</Label>
+              <Input 
+                id="edit-account" 
+                className="h-11" 
+                value={account} 
+                onChange={(e) => setAccount(e.target.value)} 
+                required 
+                type="email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-credentials">Senha</Label>
+              <Input 
+                id="edit-credentials" 
+                className="h-11" 
+                value={credentials} 
+                onChange={(e) => setCredentials(e.target.value)} 
+                required 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Status no Estoque</Label>
               <Select value={status} onValueChange={(val) => setStatus(val as 'available' | 'used')}>
-                <SelectTrigger id="edit-status">
+                <SelectTrigger id="edit-status" className="h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -105,26 +107,32 @@ export function EditItemDialog({ item, onOpenChange, onSubmit, services }: EditI
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Perfis</Label>
-            <div className="col-span-3 flex gap-2">
-              {[5, 6, 7].map((num) => (
-                <Button
-                  key={num}
-                  type="button"
-                  variant={profiles === num ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => setProfiles(profiles === num ? undefined : num)}
-                >
-                  {num}
-                </Button>
-              ))}
+
+            <div className="space-y-2">
+              <Label>Quantidade de Perfis</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[5, 6, 7].map((num) => (
+                  <Button
+                    key={num}
+                    type="button"
+                    variant={profiles === num ? 'default' : 'outline'}
+                    className="h-11"
+                    onClick={() => setProfiles(profiles === num ? undefined : num)}
+                  >
+                    {num}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit">Salvar Alterações</Button>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:flex-1 h-11">
+              Cancelar
+            </Button>
+            <Button type="submit" className="w-full sm:flex-1 h-11">
+              Salvar Alterações
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

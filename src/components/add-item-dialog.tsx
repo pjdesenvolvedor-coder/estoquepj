@@ -45,47 +45,46 @@ export function AddItemDialog({ open, onOpenChange, onSubmit, services }: AddIte
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="w-[95vw] sm:max-w-[450px] p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Novo Acesso Digital</DialogTitle>
           <DialogDescription>Insira os dados da conta para o estoque.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+        <form onSubmit={handleSubmit} className="space-y-5 py-4">
           <div className="space-y-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="service" className="text-right">Serviço</Label>
-              <div className="col-span-3">
-                <Select value={service} onValueChange={(val) => setService(val)}>
-                  <SelectTrigger id="service">
-                    <SelectValue placeholder="Selecione o serviço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="service">Serviço</Label>
+              <Select value={service} onValueChange={(val) => setService(val)}>
+                <SelectTrigger id="service" className="h-11">
+                  <SelectValue placeholder="Selecione o serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="account" className="text-right">E-mail</Label>
+            <div className="space-y-2">
+              <Label htmlFor="account">E-mail</Label>
               <Input 
                 id="account" 
-                className="col-span-3" 
+                className="h-11" 
                 value={account} 
                 onChange={(e) => setAccount(e.target.value)} 
                 required 
                 placeholder="email@exemplo.com"
+                type="email"
               />
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="credentials" className="text-right">Senha</Label>
+            <div className="space-y-2">
+              <Label htmlFor="credentials">Senha</Label>
               <Input 
                 id="credentials" 
                 type="text"
-                className="col-span-3" 
+                className="h-11" 
                 value={credentials} 
                 onChange={(e) => setCredentials(e.target.value)} 
                 required 
@@ -93,15 +92,15 @@ export function AddItemDialog({ open, onOpenChange, onSubmit, services }: AddIte
               />
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Perfis</Label>
-              <div className="col-span-3 flex gap-2">
+            <div className="space-y-2">
+              <Label>Quantidade de Perfis</Label>
+              <div className="grid grid-cols-3 gap-2">
                 {[5, 6, 7].map((num) => (
                   <Button
                     key={num}
                     type="button"
                     variant={profiles === num ? 'default' : 'outline'}
-                    className="flex-1"
+                    className="h-11"
                     onClick={() => setProfiles(profiles === num ? undefined : num)}
                   >
                     {num}
@@ -111,9 +110,13 @@ export function AddItemDialog({ open, onOpenChange, onSubmit, services }: AddIte
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit">Adicionar ao Estoque</Button>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:flex-1 h-11">
+              Cancelar
+            </Button>
+            <Button type="submit" className="w-full sm:flex-1 h-11">
+              Adicionar ao Estoque
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
