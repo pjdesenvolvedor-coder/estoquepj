@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -60,6 +59,7 @@ export function InventoryManager() {
     const newItem: InventoryItem = {
       ...item,
       id: crypto.randomUUID(),
+      profilesUsed: 0,
       createdAt: Date.now(),
     };
     setItems([newItem, ...items]);
@@ -80,10 +80,23 @@ export function InventoryManager() {
     ));
   };
 
-  const withdrawItem = (id: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, status: 'used' } : item
-    ));
+  const handleWithdraw = (itemId: string) => {
+    setItems(currentItems => currentItems.map(item => {
+      if (item.id === itemId) {
+        if (item.profiles) {
+          const newUsed = (item.profilesUsed || 0) + 1;
+          const isFinished = newUsed >= item.profiles;
+          return {
+            ...item,
+            profilesUsed: newUsed,
+            status: isFinished ? 'used' : 'available'
+          } as InventoryItem;
+        } else {
+          return { ...item, status: 'used' } as InventoryItem;
+        }
+      }
+      return item;
+    }));
   };
 
   const filteredItems = items.filter(item => {
@@ -177,9 +190,14 @@ export function InventoryManager() {
                     {item.status === 'available' ? 'Disponível' : 'Vendido'}
                   </Badge>
                   {item.profiles && (
-                    <Badge variant="outline" className="flex gap-1 items-center border-secondary text-secondary">
-                      <Users className="w-3 h-3" />
-                      {item.profiles} perfis
+                    <Badge variant="outline" className="flex flex-col gap-0.5 items-end border-secondary text-secondary">
+                      <div className="flex gap-1 items-center">
+                        <Users className="w-3 h-3" />
+                        {item.profiles} perfis
+                      </div>
+                      <div className="text-[10px] opacity-70">
+                        {item.profilesUsed || 0} vendidos
+                      </div>
                     </Badge>
                   )}
                 </div>
@@ -237,7 +255,7 @@ export function InventoryManager() {
         open={isWithdrawOpen}
         onOpenChange={setIsWithdrawOpen}
         items={items}
-        onWithdraw={withdrawItem}
+        onWithdraw={handleWithdraw}
       />
 
       <EditItemDialog 

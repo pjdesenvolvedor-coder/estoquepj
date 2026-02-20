@@ -8,5 +8,6 @@ export interface InventoryItem {
   status: 'available' | 'used';
   notes: string;
   profiles?: number;
+  profilesUsed?: number; // Contador para saber quantos perfis já foram vendidos
   createdAt: number;
 }

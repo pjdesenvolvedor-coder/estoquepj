@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InventoryItem, ServiceType } from '@/lib/types';
-import { Copy, AlertCircle } from 'lucide-react';
+import { Copy, AlertCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -24,7 +23,6 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
   const [isSupport, setIsSupport] = useState<'no' | 'yes'>('no');
   const [generatedMessage, setGeneratedMessage] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<string>('');
 
   const availableItems = useMemo(() => {
     return items.filter(item => item.status === 'available');
@@ -35,17 +33,13 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     return Array.from(new Set(services));
   }, [availableItems]);
 
-  const itemsForService = useMemo(() => {
-    if (!selectedService) return [];
-    return availableItems.filter(item => item.service === selectedService);
-  }, [selectedService, availableItems]);
-
-  const currentSelectedItem = useMemo(() => {
-    return itemsForService.find(i => i.id === selectedItemId) || itemsForService[0];
-  }, [itemsForService, selectedItemId]);
-
   const handleGenerate = () => {
-    const item = currentSelectedItem;
+    // Busca a conta mais antiga disponível para o serviço (FIFO)
+    const itemsForService = availableItems
+      .filter(item => item.service === selectedService)
+      .sort((a, b) => a.createdAt - b.createdAt);
+    
+    const item = itemsForService[0];
     if (!item) return;
 
     const serviceDisplay = isSupport === 'yes' ? `${item.service} - SUPORTE` : item.service;
@@ -54,14 +48,16 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     message += `> *EMAIL:* ${item.account}\n`;
     message += `> *SENHA:* ${item.credentials}\n`;
     
-    if (selectedProfile) {
-      message += `> *PERFIL PRIVADO:* PERFIL ${selectedProfile}\n`;
+    // Se a conta tiver perfis, seleciona o próximo automaticamente
+    if (item.profiles) {
+      const nextProfileNum = ((item.profilesUsed || 0) + 1).toString().padStart(2, '0');
+      message += `> *PERFIL PRIVADO:* PERFIL ${nextProfileNum}\n`;
     }
 
     message += `\n🚨 *Proibido altera senha da conta ou dos perfis* 🚨`;
 
     setGeneratedMessage(message);
-    if (!selectedItemId) setSelectedItemId(item.id);
+    setSelectedItemId(item.id);
   };
 
   const handleCopyAndFinish = () => {
@@ -71,7 +67,7 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     }
     toast({
       title: "Sucesso!",
-      description: "Mensagem copiada e item removido do estoque.",
+      description: "Mensagem copiada e retirada registrada.",
     });
     resetAndClose();
   };
@@ -81,7 +77,6 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     setIsSupport('no');
     setGeneratedMessage('');
     setSelectedItemId(null);
-    setSelectedProfile('');
     onOpenChange(false);
   };
 
@@ -89,19 +84,17 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle>Retirar Acesso do Estoque</DialogTitle>
-          <DialogDescription>Selecione os detalhes para gerar a mensagem de entrega.</DialogDescription>
+          <DialogTitle>Retirar Acesso</DialogTitle>
+          <DialogDescription>
+            O sistema escolherá automaticamente a conta mais antiga disponível.
+          </DialogDescription>
         </DialogHeader>
 
         {!generatedMessage ? (
           <div className="space-y-5 py-4">
             <div className="space-y-2">
-              <Label>Serviço Disponível</Label>
-              <Select value={selectedService} onValueChange={(val) => {
-                setSelectedService(val as ServiceType);
-                setSelectedItemId(null);
-                setSelectedProfile('');
-              }}>
+              <Label>Serviço</Label>
+              <Select value={selectedService} onValueChange={(val) => setSelectedService(val as ServiceType)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Escolha o serviço..." />
                 </SelectTrigger>
@@ -111,85 +104,47 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
                       <SelectItem key={service} value={service}>{service}</SelectItem>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-muted-foreground text-center">Nenhum item disponível</div>
+                    <div className="p-2 text-sm text-muted-foreground text-center">Estoque vazio</div>
                   )}
                 </SelectContent>
               </Select>
             </div>
 
-            {selectedService && (
-              <>
-                <div className="space-y-2">
-                  <Label>Tipo de Entrega</Label>
-                  <Select value={isSupport} onValueChange={(val) => setIsSupport(val as 'no' | 'yes')}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no">Venda Comum</SelectItem>
-                      <SelectItem value="yes">Suporte / Reposição</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {itemsForService.length > 1 && (
-                  <div className="space-y-2">
-                    <Label>Selecionar Conta Específica</Label>
-                    <Select value={selectedItemId || itemsForService[0].id} onValueChange={setSelectedItemId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Escolha a conta..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {itemsForService.map(item => (
-                          <SelectItem key={item.id} value={item.id}>{item.account}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {currentSelectedItem?.profiles && (
-                  <div className="space-y-2">
-                    <Label>Escolher Perfil Privado</Label>
-                    <Select value={selectedProfile} onValueChange={setSelectedProfile}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o perfil..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: currentSelectedItem.profiles }, (_, i) => {
-                          const num = (i + 1).toString().padStart(2, '0');
-                          return (
-                            <SelectItem key={num} value={num}>Perfil {num}</SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </>
-            )}
+            <div className="space-y-2">
+              <Label>Tipo de Entrega</Label>
+              <Select value={isSupport} onValueChange={(val) => setIsSupport(val as 'no' | 'yes')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no">Venda Comum</SelectItem>
+                  <SelectItem value="yes">Suporte / Reposição</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <Button 
-              className="w-full h-11" 
-              disabled={!selectedService || (currentSelectedItem?.profiles && !selectedProfile)} 
+              className="w-full h-11 bg-primary hover:bg-primary/90" 
+              disabled={!selectedService} 
               onClick={handleGenerate}
             >
+              <Sparkles className="w-4 h-4 mr-2" />
               Gerar Mensagem de Entrega
             </Button>
           </div>
         ) : (
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Mensagem Formatada:</Label>
+              <Label>Mensagem Pronta para Enviar:</Label>
               <Textarea 
                 readOnly 
                 value={generatedMessage} 
-                className="h-48 font-mono text-sm resize-none bg-muted"
+                className="h-48 font-mono text-sm resize-none bg-muted border-primary/20"
               />
             </div>
             <div className="flex items-start gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg text-xs text-primary">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <p>Ao clicar em copiar, o item será marcado como "Vendido" automaticamente.</p>
+              <p>Ao copiar, o estoque será atualizado automaticamente.</p>
             </div>
           </div>
         )}
@@ -197,7 +152,7 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
         <DialogFooter className="flex gap-2">
           {generatedMessage ? (
             <>
-              <Button variant="outline" onClick={() => setGeneratedMessage('')} className="flex-1">Voltar</Button>
+              <Button variant="outline" onClick={() => setGeneratedMessage('')} className="flex-1">Trocar Conta</Button>
               <Button onClick={handleCopyAndFinish} className="flex-1 bg-green-600 hover:bg-green-700">
                 <Copy className="w-4 h-4 mr-2" />
                 Copiar e Finalizar
