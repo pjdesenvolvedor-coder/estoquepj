@@ -40,8 +40,12 @@ export function HistoryDialog({ open, onOpenChange, history, onClearHistory }: H
   };
 
   const handleConfirmClear = () => {
+    // Executa a limpeza no banco de dados
     onClearHistory();
+    // Fecha o alerta de confirmação
     setShowConfirmClear(false);
+    // Fecha o diálogo de histórico imediatamente para evitar o fundo travado
+    onOpenChange(false);
   };
 
   return (
