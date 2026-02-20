@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InventoryItem, ServiceType } from '@/lib/types';
-import { Check, Copy, AlertCircle } from 'lucide-react';
+import { Copy, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -24,6 +24,7 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
   const [isSupport, setIsSupport] = useState<'no' | 'yes'>('no');
   const [generatedMessage, setGeneratedMessage] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<string>('');
 
   const availableItems = useMemo(() => {
     return items.filter(item => item.status === 'available');
@@ -39,21 +40,28 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     return availableItems.filter(item => item.service === selectedService);
   }, [selectedService, availableItems]);
 
+  const currentSelectedItem = useMemo(() => {
+    return itemsForService.find(i => i.id === selectedItemId) || itemsForService[0];
+  }, [itemsForService, selectedItemId]);
+
   const handleGenerate = () => {
-    const item = itemsForService.find(i => i.id === selectedItemId) || itemsForService[0];
+    const item = currentSelectedItem;
     if (!item) return;
 
     const serviceDisplay = isSupport === 'yes' ? `${item.service} - SUPORTE` : item.service;
     
-    const message = `🔴*${serviceDisplay}*🔴
+    let message = `🔴*${serviceDisplay}*🔴\n\n`;
+    message += `> *EMAIL:* ${item.account}\n`;
+    message += `> *SENHA:* ${item.credentials}\n`;
+    
+    if (selectedProfile) {
+      message += `> *PERFIL PRIVADO:* PERFIL ${selectedProfile}\n`;
+    }
 
-> *EMAIL:* ${item.account}
-> *SENHA:* ${item.credentials}
-
-🚨 *Proibido altera senha da conta ou dos perfis* 🚨`;
+    message += `\n🚨 *Proibido altera senha da conta ou dos perfis* 🚨`;
 
     setGeneratedMessage(message);
-    setSelectedItemId(item.id);
+    if (!selectedItemId) setSelectedItemId(item.id);
   };
 
   const handleCopyAndFinish = () => {
@@ -73,6 +81,7 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     setIsSupport('no');
     setGeneratedMessage('');
     setSelectedItemId(null);
+    setSelectedProfile('');
     onOpenChange(false);
   };
 
@@ -81,16 +90,17 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle>Retirar Acesso do Estoque</DialogTitle>
-          <DialogDescription>Selecione o serviço para gerar a mensagem de entrega.</DialogDescription>
+          <DialogDescription>Selecione os detalhes para gerar a mensagem de entrega.</DialogDescription>
         </DialogHeader>
 
         {!generatedMessage ? (
-          <div className="space-y-6 py-4">
+          <div className="space-y-5 py-4">
             <div className="space-y-2">
               <Label>Serviço Disponível</Label>
               <Select value={selectedService} onValueChange={(val) => {
                 setSelectedService(val as ServiceType);
                 setSelectedItemId(null);
+                setSelectedProfile('');
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Escolha o serviço..." />
@@ -108,39 +118,60 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
             </div>
 
             {selectedService && (
-              <div className="space-y-2">
-                <Label>Tipo de Entrega (Suporte?)</Label>
-                <Select value={isSupport} onValueChange={(val) => setIsSupport(val as 'no' | 'yes')}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="no">Venda Comum</SelectItem>
-                    <SelectItem value="yes">Suporte / Reposição</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+              <>
+                <div className="space-y-2">
+                  <Label>Tipo de Entrega</Label>
+                  <Select value={isSupport} onValueChange={(val) => setIsSupport(val as 'no' | 'yes')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no">Venda Comum</SelectItem>
+                      <SelectItem value="yes">Suporte / Reposição</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {itemsForService.length > 1 && (
-              <div className="space-y-2">
-                <Label>Selecionar Conta Específica</Label>
-                <Select value={selectedItemId || ''} onValueChange={setSelectedItemId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Escolha a conta..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {itemsForService.map(item => (
-                      <SelectItem key={item.id} value={item.id}>{item.account}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                {itemsForService.length > 1 && (
+                  <div className="space-y-2">
+                    <Label>Selecionar Conta Específica</Label>
+                    <Select value={selectedItemId || itemsForService[0].id} onValueChange={setSelectedItemId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Escolha a conta..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {itemsForService.map(item => (
+                          <SelectItem key={item.id} value={item.id}>{item.account}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {currentSelectedItem?.profiles && (
+                  <div className="space-y-2">
+                    <Label>Escolher Perfil Privado</Label>
+                    <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o perfil..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: currentSelectedItem.profiles }, (_, i) => {
+                          const num = (i + 1).toString().padStart(2, '0');
+                          return (
+                            <SelectItem key={num} value={num}>Perfil {num}</SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
             )}
 
             <Button 
               className="w-full h-11" 
-              disabled={!selectedService} 
+              disabled={!selectedService || (currentSelectedItem?.profiles && !selectedProfile)} 
               onClick={handleGenerate}
             >
               Gerar Mensagem de Entrega
