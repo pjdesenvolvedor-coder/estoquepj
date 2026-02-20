@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,7 +20,8 @@ import {
   Youtube, 
   LayoutGrid,
   LogOut,
-  Users
+  Users,
+  ExternalLink
 } from 'lucide-react';
 import { 
   Card, 
@@ -30,12 +32,14 @@ import {
 } from '@/components/ui/card';
 import { AddItemDialog } from './add-item-dialog';
 import { EditItemDialog } from './edit-item-dialog';
+import { WithdrawAccessDialog } from './withdraw-access-dialog';
 
 export function InventoryManager() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
@@ -76,6 +80,12 @@ export function InventoryManager() {
     ));
   };
 
+  const withdrawItem = (id: string) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, status: 'used' } : item
+    ));
+  };
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.account.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.service.toLowerCase().includes(searchTerm.toLowerCase());
@@ -111,6 +121,10 @@ export function InventoryManager() {
         <div className="flex gap-2 w-full sm:w-auto">
           <Button variant="outline" size="icon" onClick={handleLogout} title="Sair" className="shrink-0">
             <LogOut className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" onClick={() => setIsWithdrawOpen(true)} className="flex-1 sm:flex-none border-primary text-primary hover:bg-primary/5">
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Retirar Acesso
           </Button>
           <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none">
             <Plus className="w-4 h-4 mr-2" />
@@ -202,9 +216,14 @@ export function InventoryManager() {
           </div>
           <h3 className="text-xl font-medium">Nenhum item encontrado</h3>
           <p className="text-muted-foreground">Tente mudar o filtro ou adicionar um novo produto.</p>
-          <Button onClick={() => setIsAddOpen(true)} className="mt-4" variant="outline">
-            Adicionar Primeiro Item
-          </Button>
+          <div className="flex gap-2 justify-center mt-4">
+            <Button onClick={() => setIsWithdrawOpen(true)} variant="outline">
+              Retirar Acesso
+            </Button>
+            <Button onClick={() => setIsAddOpen(true)} variant="outline">
+              Adicionar Primeiro Item
+            </Button>
+          </div>
         </div>
       )}
 
@@ -212,6 +231,13 @@ export function InventoryManager() {
         open={isAddOpen} 
         onOpenChange={setIsAddOpen} 
         onSubmit={addItem} 
+      />
+
+      <WithdrawAccessDialog
+        open={isWithdrawOpen}
+        onOpenChange={setIsWithdrawOpen}
+        items={items}
+        onWithdraw={withdrawItem}
       />
 
       <EditItemDialog 
