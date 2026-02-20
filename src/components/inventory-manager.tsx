@@ -24,7 +24,8 @@ import {
   AlertTriangle,
   History,
   BarChart3,
-  Loader2
+  Loader2,
+  Eraser
 } from 'lucide-react';
 import { 
   Card, 
@@ -179,20 +180,15 @@ export function InventoryManager() {
   const confirmClearHistory = () => {
     if (!user || !db) return;
     
-    // Fecha a confirmação primeiro
-    setShowClearHistoryConfirm(false);
-    
     // Deleta os registros
     history.forEach(entry => {
       const docRef = doc(db, 'users', user.uid, 'history', entry.id);
       deleteDocumentNonBlocking(docRef);
     });
     
-    // Fecha o diálogo de histórico após um pequeno delay para evitar travamento de overlay
-    setTimeout(() => {
-      setIsHistoryOpen(false);
-      toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
-    }, 200);
+    setShowClearHistoryConfirm(false);
+    setIsHistoryOpen(false);
+    toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
   };
 
   const filteredItems = items.filter(item => {
@@ -254,6 +250,15 @@ export function InventoryManager() {
           >
             <BarChart3 className="w-4 h-4 mr-2" />
             Quantidade
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowClearHistoryConfirm(true)}
+            className="h-11 w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50"
+            title="Limpar Histórico"
+          >
+            <Eraser className="w-4 h-4 mr-2" />
+            Limpar Histórico
           </Button>
           <Button 
             variant="outline" 
@@ -492,7 +497,6 @@ export function InventoryManager() {
         open={isHistoryOpen}
         onOpenChange={setIsHistoryOpen}
         history={history}
-        onClearHistory={() => setShowClearHistoryConfirm(true)}
       />
 
       <StatsDialog

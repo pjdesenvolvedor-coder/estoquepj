@@ -4,7 +4,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { HistoryEntry } from '@/lib/types';
-import { Clock, Calendar, Copy, Trash2 } from 'lucide-react';
+import { Clock, Calendar, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -13,10 +13,9 @@ interface HistoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   history: HistoryEntry[];
-  onClearHistory: () => void;
 }
 
-export function HistoryDialog({ open, onOpenChange, history, onClearHistory }: HistoryDialogProps) {
+export function HistoryDialog({ open, onOpenChange, history }: HistoryDialogProps) {
   const { toast } = useToast();
 
   const copyMessage = (message: string) => {
@@ -85,18 +84,8 @@ export function HistoryDialog({ open, onOpenChange, history, onClearHistory }: H
           </div>
         </div>
 
-        <DialogFooter className="p-4 border-t bg-white shrink-0 gap-2 flex flex-col sm:flex-row">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 order-2 sm:order-1"
-            onClick={onClearHistory}
-            disabled={history.length === 0}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Limpar Tudo
-          </Button>
-          <Button onClick={() => onOpenChange(false)} className="h-10 flex-1 order-1 sm:order-2">Fechar</Button>
+        <DialogFooter className="p-4 border-t bg-white shrink-0">
+          <Button onClick={() => onOpenChange(false)} className="w-full h-11">Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
