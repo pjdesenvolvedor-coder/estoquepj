@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Plus, 
   Search, 
-  Filter, 
   Trash2, 
   Edit3, 
   CheckCircle2, 
@@ -19,8 +18,8 @@ import {
   Music, 
   Youtube, 
   LayoutGrid,
-  Sparkles,
-  LogOut
+  LogOut,
+  Users
 } from 'lucide-react';
 import { 
   Card, 
@@ -31,7 +30,6 @@ import {
 } from '@/components/ui/card';
 import { AddItemDialog } from './add-item-dialog';
 import { EditItemDialog } from './edit-item-dialog';
-import { AiEnhancerModal } from './ai-enhancer-modal';
 
 export function InventoryManager() {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -39,7 +37,6 @@ export function InventoryManager() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-  const [enhancingItem, setEnhancingItem] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('streamstock_items');
@@ -105,7 +102,7 @@ export function InventoryManager() {
         <div className="relative w-full sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Buscar por conta ou serviço..." 
+            placeholder="Buscar por e-mail ou serviço..." 
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -161,22 +158,24 @@ export function InventoryManager() {
                     <CardDescription className="font-mono text-xs">{item.account}</CardDescription>
                   </div>
                 </div>
-                <Badge variant={item.status === 'available' ? 'default' : 'secondary'} className={item.status === 'available' ? 'bg-green-600' : ''}>
-                  {item.status === 'available' ? 'Disponível' : 'Vendido'}
-                </Badge>
+                <div className="flex flex-col items-end gap-2">
+                  <Badge variant={item.status === 'available' ? 'default' : 'secondary'} className={item.status === 'available' ? 'bg-green-600' : ''}>
+                    {item.status === 'available' ? 'Disponível' : 'Vendido'}
+                  </Badge>
+                  {item.profiles && (
+                    <Badge variant="outline" className="flex gap-1 items-center border-secondary text-secondary">
+                      <Users className="w-3 h-3" />
+                      {item.profiles} perfis
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-muted p-3 rounded-md text-sm break-all font-mono">
-                <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Credenciais</p>
+                <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Senha</p>
                 {item.credentials}
               </div>
-              
-              {item.notes && (
-                <div className="text-sm italic text-muted-foreground border-l-2 border-secondary pl-2 py-1 bg-secondary/5 rounded-r-md">
-                  {item.notes}
-                </div>
-              )}
 
               <div className="flex justify-between pt-2">
                 <div className="flex gap-2">
@@ -185,9 +184,6 @@ export function InventoryManager() {
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)} title="Editar">
                     <Edit3 className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setEnhancingItem(item)} className="text-secondary hover:text-secondary" title="Melhorar Notas com IA">
-                    <Sparkles className="w-4 h-4" />
                   </Button>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => deleteItem(item.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10" title="Excluir">
@@ -222,12 +218,6 @@ export function InventoryManager() {
         item={editingItem} 
         onOpenChange={(open) => !open && setEditingItem(null)} 
         onSubmit={updateItem} 
-      />
-
-      <AiEnhancerModal 
-        item={enhancingItem} 
-        onOpenChange={(open) => !open && setEnhancingItem(null)} 
-        onUpdate={updateItem}
       />
     </div>
   );

@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ServiceType, InventoryItem } from '@/lib/types';
 
@@ -19,16 +18,16 @@ export function EditItemDialog({ item, onOpenChange, onSubmit }: EditItemDialogP
   const [service, setService] = useState<ServiceType>('Netflix');
   const [account, setAccount] = useState('');
   const [credentials, setCredentials] = useState('');
-  const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<'available' | 'used'>('available');
+  const [profiles, setProfiles] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (item) {
       setService(item.service);
       setAccount(item.account);
       setCredentials(item.credentials);
-      setNotes(item.notes);
       setStatus(item.status);
+      setProfiles(item.profiles);
     }
   }, [item]);
 
@@ -40,8 +39,8 @@ export function EditItemDialog({ item, onOpenChange, onSubmit }: EditItemDialogP
         service,
         account,
         credentials,
-        notes,
         status,
+        profiles,
       });
       onOpenChange(false);
     }
@@ -78,7 +77,7 @@ export function EditItemDialog({ item, onOpenChange, onSubmit }: EditItemDialogP
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-account" className="text-right">Conta/E-mail</Label>
+            <Label htmlFor="edit-account" className="text-right">E-mail</Label>
             <Input 
               id="edit-account" 
               className="col-span-3" 
@@ -88,7 +87,7 @@ export function EditItemDialog({ item, onOpenChange, onSubmit }: EditItemDialogP
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-credentials" className="text-right">Credenciais</Label>
+            <Label htmlFor="edit-credentials" className="text-right">Senha</Label>
             <Input 
               id="edit-credentials" 
               className="col-span-3" 
@@ -111,14 +110,21 @@ export function EditItemDialog({ item, onOpenChange, onSubmit }: EditItemDialogP
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="edit-notes" className="text-right pt-2">Observações</Label>
-            <Textarea 
-              id="edit-notes" 
-              className="col-span-3" 
-              value={notes} 
-              onChange={(e) => setNotes(e.target.value)} 
-            />
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Perfis</Label>
+            <div className="col-span-3 flex gap-2">
+              {[5, 6, 7].map((num) => (
+                <Button
+                  key={num}
+                  type="button"
+                  variant={profiles === num ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setProfiles(profiles === num ? undefined : num)}
+                >
+                  {num}
+                </Button>
+              ))}
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

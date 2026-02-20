@@ -7,5 +7,6 @@ export interface InventoryItem {
   credentials: string;
   status: 'available' | 'used';
   notes: string;
+  profiles?: number;
   createdAt: number;
 }
