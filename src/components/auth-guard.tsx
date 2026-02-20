@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Lock, LogIn } from 'lucide-react';
 
-const FIXED_PASSWORD = 'Ae@1234br';
+const FIXED_PASSWORD = 'Ae@1234Br';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
