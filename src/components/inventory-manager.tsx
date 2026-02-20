@@ -111,6 +111,16 @@ export function InventoryManager() {
     }
   };
 
+  const clearInventory = () => {
+    if (!user || !db || items.length === 0) return;
+    if (window.confirm('ATENÇÃO: Deseja apagar TODAS as contas do estoque? Esta ação não pode ser desfeita.')) {
+      items.forEach(item => {
+        const docRef = doc(db, 'users', user.uid, 'inventory', item.id);
+        deleteDocumentNonBlocking(docRef);
+      });
+    }
+  };
+
   const toggleStatus = (id: string, currentStatus: string) => {
     if (!user || !db) return;
     const docRef = doc(db, 'users', user.uid, 'inventory', id);
@@ -219,6 +229,15 @@ export function InventoryManager() {
           >
             <BarChart3 className="w-4 h-4 mr-2" />
             Quantidade
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={clearInventory}
+            className="h-11 w-full sm:w-auto border-destructive text-destructive hover:bg-destructive/5"
+            title="Apagar Todo o Estoque"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Limpar Tudo
           </Button>
           <Button 
             variant="outline" 
