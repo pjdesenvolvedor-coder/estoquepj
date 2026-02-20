@@ -61,7 +61,6 @@ export function InventoryManager() {
   const db = useFirestore();
   const { toast } = useToast();
   
-  // Queries memoizadas para evitar re-renderizações infinitas
   const inventoryQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'inventory'), orderBy('createdAt', 'desc'));
@@ -88,7 +87,6 @@ export function InventoryManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
   
-  // Estados dos Diálogos
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -96,7 +94,6 @@ export function InventoryManager() {
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   
-  // Estados de Confirmação
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false);
@@ -181,13 +178,21 @@ export function InventoryManager() {
 
   const confirmClearHistory = () => {
     if (!user || !db) return;
+    
+    // Fecha a confirmação primeiro
+    setShowClearHistoryConfirm(false);
+    
+    // Deleta os registros
     history.forEach(entry => {
       const docRef = doc(db, 'users', user.uid, 'history', entry.id);
       deleteDocumentNonBlocking(docRef);
     });
-    setShowClearHistoryConfirm(false);
-    setIsHistoryOpen(false);
-    toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
+    
+    // Fecha o diálogo de histórico após um pequeno delay para evitar travamento de overlay
+    setTimeout(() => {
+      setIsHistoryOpen(false);
+      toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
+    }, 200);
   };
 
   const filteredItems = items.filter(item => {
@@ -403,7 +408,6 @@ export function InventoryManager() {
         ))}
       </div>
 
-      {/* Diálogos de Confirmação */}
       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -455,7 +459,6 @@ export function InventoryManager() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Outros Diálogos */}
       <AddItemDialog 
         open={isAddOpen} 
         onOpenChange={setIsAddOpen} 
