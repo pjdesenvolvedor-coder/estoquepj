@@ -32,6 +32,16 @@ import {
   CardHeader, 
   CardTitle, 
 } from '@/components/ui/card';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AddItemDialog } from './add-item-dialog';
 import { EditItemDialog } from './edit-item-dialog';
 import { WithdrawAccessDialog } from './withdraw-access-dialog';
@@ -42,12 +52,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, orderBy } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
 
 const DEFAULT_SERVICES = ['Netflix', 'Disney+', 'HBO Max', 'Prime Video', 'Spotify', 'Youtube', 'Crunchyroll'];
 
 export function InventoryManager() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   
   // Queries memoizadas para evitar re-renderizações infinitas
   const inventoryQuery = useMemoFirebase(() => {
@@ -83,6 +95,10 @@ export function InventoryManager() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  
+  // Estados de Confirmação
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleLogout = () => {
     window.location.reload();
@@ -96,6 +112,7 @@ export function InventoryManager() {
       profilesUsed: 0,
       createdAt: Date.now(),
     });
+    toast({ title: "Sucesso", description: "Item adicionado ao estoque." });
   };
 
   const updateItem = (updatedItem: InventoryItem) => {
@@ -104,24 +121,25 @@ export function InventoryManager() {
     const { id, ...data } = updatedItem;
     updateDocumentNonBlocking(docRef, data);
     setEditingItem(null);
+    toast({ title: "Atualizado", description: "Item atualizado com sucesso." });
   };
 
-  const deleteItem = (id: string) => {
-    if (!user || !db) return;
-    if (confirm('Tem certeza que deseja excluir esta conta?')) {
-      const docRef = doc(db, 'users', user.uid, 'inventory', id);
-      deleteDocumentNonBlocking(docRef);
-    }
+  const confirmDeleteItem = () => {
+    if (!user || !db || !itemToDelete) return;
+    const docRef = doc(db, 'users', user.uid, 'inventory', itemToDelete);
+    deleteDocumentNonBlocking(docRef);
+    setItemToDelete(null);
+    toast({ variant: "destructive", title: "Excluído", description: "O item foi removido do estoque." });
   };
 
-  const clearInventory = () => {
+  const confirmClearInventory = () => {
     if (!user || !db || items.length === 0) return;
-    if (confirm('ATENÇÃO: Deseja apagar TODAS as contas do estoque? Esta ação não pode ser desfeita.')) {
-      items.forEach(item => {
-        const docRef = doc(db, 'users', user.uid, 'inventory', item.id);
-        deleteDocumentNonBlocking(docRef);
-      });
-    }
+    items.forEach(item => {
+      const docRef = doc(db, 'users', user.uid, 'inventory', item.id);
+      deleteDocumentNonBlocking(docRef);
+    });
+    setShowClearConfirm(false);
+    toast({ variant: "destructive", title: "Estoque Limpo", description: "Todas as contas foram removidas." });
   };
 
   const toggleStatus = (id: string, currentStatus: string) => {
@@ -166,11 +184,12 @@ export function InventoryManager() {
       const docRef = doc(db, 'users', user.uid, 'history', entry.id);
       deleteDocumentNonBlocking(docRef);
     });
+    toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
   };
 
   const filteredItems = items.filter(item => {
-    const matchesSearch = item.account.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          item.service.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (item.account?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+                          (item.service?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || item.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
@@ -230,7 +249,7 @@ export function InventoryManager() {
           </Button>
           <Button 
             variant="outline" 
-            onClick={clearInventory}
+            onClick={() => setShowClearConfirm(true)}
             className="h-11 w-full sm:w-auto border-destructive text-destructive hover:bg-destructive/5"
           >
             <Trash2 className="w-4 h-4 mr-2" />
@@ -369,7 +388,7 @@ export function InventoryManager() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => deleteItem(item.id)} 
+                  onClick={() => setItemToDelete(item.id)} 
                   className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10" 
                   title="Excluir"
                 >
@@ -381,7 +400,42 @@ export function InventoryManager() {
         ))}
       </div>
 
-      {/* Diálogos que abrem ao clicar nos botões */}
+      {/* Diálogos de Confirmação */}
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente a conta do seu estoque.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpar TODO o estoque?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ATENÇÃO: Todas as contas cadastradas serão apagadas permanentemente. Esta ação é irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Manter estoque</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClearInventory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Outros Diálogos */}
       <AddItemDialog 
         open={isAddOpen} 
         onOpenChange={setIsAddOpen} 
