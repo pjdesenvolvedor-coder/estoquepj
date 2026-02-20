@@ -40,7 +40,7 @@ import { HistoryDialog } from './history-dialog';
 import { StatsDialog } from './stats-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, query, orderBy } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const DEFAULT_SERVICES = ['Netflix', 'Disney+', 'HBO Max', 'Prime Video', 'Spotify', 'Youtube', 'Crunchyroll'];
@@ -49,7 +49,6 @@ export function InventoryManager() {
   const { user } = useUser();
   const db = useFirestore();
   
-  // Queries do Firestore
   const inventoryQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'inventory'), orderBy('createdAt', 'desc'));
@@ -65,10 +64,12 @@ export function InventoryManager() {
     return doc(db, 'users', user.uid, 'settings', 'services');
   }, [db, user]);
 
-  const { data: items = [], isLoading: itemsLoading } = useCollection<InventoryItem>(inventoryQuery);
-  const { data: history = [], isLoading: historyLoading } = useCollection<HistoryEntry>(historyQuery);
+  const { data: rawItems, isLoading: itemsLoading } = useCollection<InventoryItem>(inventoryQuery);
+  const { data: rawHistory, isLoading: historyLoading } = useCollection<HistoryEntry>(historyQuery);
   const { data: settingsDoc } = useDoc<any>(settingsRef);
 
+  const items = rawItems || [];
+  const history = rawHistory || [];
   const services = settingsDoc?.names || DEFAULT_SERVICES;
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,10 +121,9 @@ export function InventoryManager() {
 
   const handleWithdraw = (itemId: string, historyEntry: HistoryEntry) => {
     if (!user || !db) return;
-    const item = (items || []).find(i => i.id === itemId);
+    const item = items.find(i => i.id === itemId);
     if (!item) return;
 
-    // Atualiza item
     const itemRef = doc(db, 'users', user.uid, 'inventory', itemId);
     if (item.profiles) {
       const newUsed = (item.profilesUsed || 0) + 1;
@@ -136,7 +136,6 @@ export function InventoryManager() {
       updateDocumentNonBlocking(itemRef, { status: 'used' });
     }
 
-    // Adiciona ao histórico
     const histRef = collection(db, 'users', user.uid, 'history');
     const { id: _, ...histData } = historyEntry;
     addDocumentNonBlocking(histRef, histData);
@@ -150,14 +149,13 @@ export function InventoryManager() {
 
   const clearHistory = () => {
     if (!user || !db) return;
-    // No Firestore, deletar tudo requer deletar cada doc (simplificado aqui)
-    history?.forEach(entry => {
+    history.forEach(entry => {
       const docRef = doc(db, 'users', user.uid, 'history', entry.id);
       deleteDocumentNonBlocking(docRef);
     });
   };
 
-  const filteredItems = (items || []).filter(item => {
+  const filteredItems = items.filter(item => {
     const matchesSearch = item.account.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.service.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || item.status === filterStatus;
@@ -166,7 +164,7 @@ export function InventoryManager() {
 
   const outOfStockServices = useMemo(() => {
     return services.filter(service => 
-      !(items || []).some(item => item.service === service && item.status === 'available')
+      !items.some(item => item.service === service && item.status === 'available')
     );
   }, [services, items]);
 
@@ -193,7 +191,6 @@ export function InventoryManager() {
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      {/* Search and Top Actions Bar */}
       <div className="flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -241,7 +238,6 @@ export function InventoryManager() {
         </div>
       </div>
 
-      {/* Stock Alerts Area */}
       {outOfStockServices.length > 0 && (
         <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -259,7 +255,6 @@ export function InventoryManager() {
         </Alert>
       )}
 
-      {/* Status Filters and History Button */}
       <div className="flex items-center justify-between gap-4 w-full">
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar w-full">
           <Button 
@@ -298,7 +293,6 @@ export function InventoryManager() {
         </Button>
       </div>
 
-      {/* Inventory Grid */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
         {filteredItems.map((item) => (
           <Card key={item.id} className={`group hover:shadow-md transition-all border-l-4 ${item.status === 'available' ? 'border-l-green-500' : 'border-l-gray-400 opacity-80'}`}>
