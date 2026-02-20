@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ServiceType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,9 @@ import {
   LayoutGrid,
   LogOut,
   Users,
-  ExternalLink
+  ExternalLink,
+  Settings2,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   Card, 
@@ -32,23 +34,40 @@ import {
 import { AddItemDialog } from './add-item-dialog';
 import { EditItemDialog } from './edit-item-dialog';
 import { WithdrawAccessDialog } from './withdraw-access-dialog';
+import { SettingsDialog } from './settings-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+const DEFAULT_SERVICES = ['Netflix', 'Disney+', 'HBO Max', 'Prime Video', 'Spotify', 'Youtube', 'Crunchyroll'];
 
 export function InventoryManager() {
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [services, setServices] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('streamstock_items');
-    if (saved) setItems(JSON.parse(saved));
+    const savedItems = localStorage.getItem('streamstock_items');
+    if (savedItems) setItems(JSON.parse(savedItems));
+
+    const savedServices = localStorage.getItem('streamstock_services');
+    if (savedServices) {
+      setServices(JSON.parse(savedServices));
+    } else {
+      setServices(DEFAULT_SERVICES);
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('streamstock_items', JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem('streamstock_services', JSON.stringify(services));
+  }, [services]);
 
   const handleLogout = () => {
     localStorage.removeItem('streamstock_auth');
@@ -106,17 +125,22 @@ export function InventoryManager() {
     return matchesSearch && matchesFilter;
   });
 
+  const outOfStockServices = useMemo(() => {
+    return services.filter(service => 
+      !items.some(item => item.service === service && item.status === 'available')
+    );
+  }, [services, items]);
+
   const getServiceIcon = (service: ServiceType) => {
-    switch (service) {
-      case 'Netflix': return <MonitorPlay className="w-5 h-5" />;
-      case 'Disney+': return <Tv className="w-5 h-5" />;
-      case 'HBO Max': return <Tv className="w-5 h-5" />;
-      case 'Prime Video': return <MonitorPlay className="w-5 h-5" />;
-      case 'Spotify': return <Music className="w-5 h-5" />;
-      case 'Youtube': return <Youtube className="w-5 h-5" />;
-      case 'Crunchyroll': return <Gamepad className="w-5 h-5" />;
-      default: return <LayoutGrid className="w-5 h-5" />;
-    }
+    const s = service.toLowerCase();
+    if (s.includes('netflix')) return <MonitorPlay className="w-5 h-5" />;
+    if (s.includes('disney')) return <Tv className="w-5 h-5" />;
+    if (s.includes('hbo')) return <Tv className="w-5 h-5" />;
+    if (s.includes('prime')) return <MonitorPlay className="w-5 h-5" />;
+    if (s.includes('spotify')) return <Music className="w-5 h-5" />;
+    if (s.includes('youtube')) return <Youtube className="w-5 h-5" />;
+    if (s.includes('crunchyroll')) return <Gamepad className="w-5 h-5" />;
+    return <LayoutGrid className="w-5 h-5" />;
   };
 
   return (
@@ -135,6 +159,9 @@ export function InventoryManager() {
           <Button variant="outline" size="icon" onClick={handleLogout} title="Sair" className="shrink-0">
             <LogOut className="w-4 h-4" />
           </Button>
+          <Button variant="outline" size="icon" onClick={() => setIsSettingsOpen(true)} title="Configurações" className="shrink-0">
+            <Settings2 className="w-4 h-4" />
+          </Button>
           <Button variant="outline" onClick={() => setIsWithdrawOpen(true)} className="flex-1 sm:flex-none border-primary text-primary hover:bg-primary/5">
             <ExternalLink className="w-4 h-4 mr-2" />
             Retirar Acesso
@@ -145,6 +172,23 @@ export function InventoryManager() {
           </Button>
         </div>
       </div>
+
+      {outOfStockServices.length > 0 && (
+        <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive animate-in fade-in slide-in-from-top-2">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle className="font-bold">Aviso de Estoque!</AlertTitle>
+          <AlertDescription className="text-sm">
+            Os seguintes serviços estão <span className="font-bold underline">SEM ESTOQUE</span> disponível: 
+            <div className="flex flex-wrap gap-2 mt-2">
+              {outOfStockServices.map(s => (
+                <Badge key={s} variant="destructive" className="font-normal">
+                  {s}
+                </Badge>
+              ))}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="flex gap-2 overflow-x-auto pb-2">
         <Button 
@@ -253,7 +297,8 @@ export function InventoryManager() {
       <AddItemDialog 
         open={isAddOpen} 
         onOpenChange={setIsAddOpen} 
-        onSubmit={addItem} 
+        onSubmit={addItem}
+        services={services}
       />
 
       <WithdrawAccessDialog
@@ -261,12 +306,21 @@ export function InventoryManager() {
         onOpenChange={setIsWithdrawOpen}
         items={items}
         onWithdraw={handleWithdraw}
+        services={services}
       />
 
       <EditItemDialog 
         item={editingItem} 
         onOpenChange={(open) => !open && setEditingItem(null)} 
-        onSubmit={updateItem} 
+        onSubmit={updateItem}
+        services={services}
+      />
+
+      <SettingsDialog
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        services={services}
+        onUpdateServices={setServices}
       />
     </div>
   );

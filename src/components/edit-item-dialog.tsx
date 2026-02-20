@@ -12,10 +12,11 @@ interface EditItemDialogProps {
   item: InventoryItem | null;
   onOpenChange: (open: boolean) => void;
   onSubmit: (item: InventoryItem) => void;
+  services: string[];
 }
 
-export function EditItemDialog({ item, onOpenChange, onSubmit }: EditItemDialogProps) {
-  const [service, setService] = useState<ServiceType>('Netflix');
+export function EditItemDialog({ item, onOpenChange, onSubmit, services }: EditItemDialogProps) {
+  const [service, setService] = useState<ServiceType>('');
   const [account, setAccount] = useState('');
   const [credentials, setCredentials] = useState('');
   const [status, setStatus] = useState<'available' | 'used'>('available');
@@ -59,19 +60,14 @@ export function EditItemDialog({ item, onOpenChange, onSubmit }: EditItemDialogP
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="edit-service" className="text-right">Serviço</Label>
             <div className="col-span-3">
-              <Select value={service} onValueChange={(val) => setService(val as ServiceType)}>
+              <Select value={service} onValueChange={(val) => setService(val)}>
                 <SelectTrigger id="edit-service">
                   <SelectValue placeholder="Selecione o serviço" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Netflix">Netflix</SelectItem>
-                  <SelectItem value="Disney+">Disney+</SelectItem>
-                  <SelectItem value="HBO Max">HBO Max</SelectItem>
-                  <SelectItem value="Prime Video">Prime Video</SelectItem>
-                  <SelectItem value="Spotify">Spotify</SelectItem>
-                  <SelectItem value="Youtube">Youtube</SelectItem>
-                  <SelectItem value="Crunchyroll">Crunchyroll</SelectItem>
-                  <SelectItem value="Outro">Outro</SelectItem>
+                  {services.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

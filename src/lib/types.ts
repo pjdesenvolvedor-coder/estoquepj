@@ -1,4 +1,4 @@
-export type ServiceType = 'Netflix' | 'Disney+' | 'HBO Max' | 'Prime Video' | 'Spotify' | 'Youtube' | 'Crunchyroll' | 'Outro';
+export type ServiceType = string;
 
 export interface InventoryItem {
   id: string;
@@ -8,6 +8,6 @@ export interface InventoryItem {
   status: 'available' | 'used';
   notes: string;
   profiles?: number;
-  profilesUsed?: number; // Contador para saber quantos perfis já foram vendidos
+  profilesUsed?: number;
   createdAt: number;
 }

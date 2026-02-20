@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,11 +15,12 @@ interface WithdrawAccessDialogProps {
   onOpenChange: (open: boolean) => void;
   items: InventoryItem[];
   onWithdraw: (id: string) => void;
+  services: string[];
 }
 
-export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: WithdrawAccessDialogProps) {
+export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, services }: WithdrawAccessDialogProps) {
   const { toast } = useToast();
-  const [selectedService, setSelectedService] = useState<ServiceType | ''>('');
+  const [selectedService, setSelectedService] = useState<string | ''>('');
   const [isSupport, setIsSupport] = useState<'no' | 'yes'>('no');
   const [generatedMessage, setGeneratedMessage] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -28,13 +29,13 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     return items.filter(item => item.status === 'available');
   }, [items]);
 
-  const uniqueServices = useMemo(() => {
-    const services = availableItems.map(item => item.service);
-    return Array.from(new Set(services));
-  }, [availableItems]);
+  // Apenas serviços que existem nas configurações E possuem estoque
+  const activeUniqueServices = useMemo(() => {
+    const servicesInStock = availableItems.map(item => item.service);
+    return services.filter(s => servicesInStock.includes(s));
+  }, [availableItems, services]);
 
   const handleGenerate = () => {
-    // Busca a conta mais antiga disponível para o serviço (FIFO)
     const itemsForService = availableItems
       .filter(item => item.service === selectedService)
       .sort((a, b) => a.createdAt - b.createdAt);
@@ -48,7 +49,6 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
     message += `> *EMAIL:* ${item.account}\n`;
     message += `> *SENHA:* ${item.credentials}\n`;
     
-    // Se a conta tiver perfis, seleciona o próximo automaticamente
     if (item.profiles) {
       const nextProfileNum = ((item.profilesUsed || 0) + 1).toString().padStart(2, '0');
       message += `> *PERFIL PRIVADO:* PERFIL ${nextProfileNum}\n`;
@@ -94,17 +94,17 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw }: 
           <div className="space-y-5 py-4">
             <div className="space-y-2">
               <Label>Serviço</Label>
-              <Select value={selectedService} onValueChange={(val) => setSelectedService(val as ServiceType)}>
+              <Select value={selectedService} onValueChange={(val) => setSelectedService(val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Escolha o serviço..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {uniqueServices.length > 0 ? (
-                    uniqueServices.map(service => (
+                  {activeUniqueServices.length > 0 ? (
+                    activeUniqueServices.map(service => (
                       <SelectItem key={service} value={service}>{service}</SelectItem>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-muted-foreground text-center">Estoque vazio</div>
+                    <div className="p-2 text-sm text-muted-foreground text-center">Nenhum serviço disponível com estoque</div>
                   )}
                 </SelectContent>
               </Select>
