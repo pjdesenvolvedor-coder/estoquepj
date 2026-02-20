@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { InventoryItem, ServiceType, HistoryEntry } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,12 +20,11 @@ import {
   Youtube, 
   LayoutGrid,
   LogOut,
-  Users,
-  ExternalLink,
   Settings2,
   AlertTriangle,
   History,
-  BarChart3
+  BarChart3,
+  Loader2
 } from 'lucide-react';
 import { 
   Card, 
@@ -39,13 +39,38 @@ import { SettingsDialog } from './settings-dialog';
 import { HistoryDialog } from './history-dialog';
 import { StatsDialog } from './stats-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const DEFAULT_SERVICES = ['Netflix', 'Disney+', 'HBO Max', 'Prime Video', 'Spotify', 'Youtube', 'Crunchyroll'];
 
 export function InventoryManager() {
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [services, setServices] = useState<string[]>([]);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const { user } = useUser();
+  const db = useFirestore();
+  
+  // Queries do Firestore
+  const inventoryQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'users', user.uid, 'inventory'), orderBy('createdAt', 'desc'));
+  }, [db, user]);
+
+  const historyQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'users', user.uid, 'history'), orderBy('timestamp', 'desc'));
+  }, [db, user]);
+
+  const settingsRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid, 'settings', 'services');
+  }, [db, user]);
+
+  const { data: items = [], isLoading: itemsLoading } = useCollection<InventoryItem>(inventoryQuery);
+  const { data: history = [], isLoading: historyLoading } = useCollection<HistoryEntry>(historyQuery);
+  const { data: settingsDoc } = useDoc<any>(settingsRef);
+
+  const services = settingsDoc?.names || DEFAULT_SERVICES;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -55,92 +80,84 @@ export function InventoryManager() {
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
-  useEffect(() => {
-    const savedItems = localStorage.getItem('streamstock_items');
-    if (savedItems) setItems(JSON.parse(savedItems));
-
-    const savedServices = localStorage.getItem('streamstock_services');
-    if (savedServices) {
-      setServices(JSON.parse(savedServices));
-    } else {
-      setServices(DEFAULT_SERVICES);
-    }
-
-    const savedHistory = localStorage.getItem('streamstock_history');
-    if (savedHistory) setHistory(JSON.parse(savedHistory));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('streamstock_items', JSON.stringify(items));
-  }, [items]);
-
-  useEffect(() => {
-    localStorage.setItem('streamstock_services', JSON.stringify(services));
-  }, [services]);
-
-  useEffect(() => {
-    localStorage.setItem('streamstock_history', JSON.stringify(history));
-  }, [history]);
-
   const handleLogout = () => {
-    localStorage.removeItem('streamstock_auth');
     window.location.reload();
   };
 
   const addItem = (item: Omit<InventoryItem, 'id' | 'createdAt'>) => {
-    const newItem: InventoryItem = {
+    if (!user || !db) return;
+    const colRef = collection(db, 'users', user.uid, 'inventory');
+    addDocumentNonBlocking(colRef, {
       ...item,
-      id: crypto.randomUUID(),
       profilesUsed: 0,
       createdAt: Date.now(),
-    };
-    setItems([newItem, ...items]);
+    });
   };
 
   const updateItem = (updatedItem: InventoryItem) => {
-    setItems(items.map(item => item.id === updatedItem.id ? updatedItem : item));
+    if (!user || !db) return;
+    const docRef = doc(db, 'users', user.uid, 'inventory', updatedItem.id);
+    const { id, ...data } = updatedItem;
+    updateDocumentNonBlocking(docRef, data);
     setEditingItem(null);
   };
 
   const deleteItem = (id: string) => {
+    if (!user || !db) return;
     if (window.confirm('Tem certeza que deseja excluir esta conta?')) {
-      setItems(items.filter(item => item.id !== id));
+      const docRef = doc(db, 'users', user.uid, 'inventory', id);
+      deleteDocumentNonBlocking(docRef);
     }
   };
 
-  const toggleStatus = (id: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, status: item.status === 'available' ? 'used' : 'available' } : item
-    ));
+  const toggleStatus = (id: string, currentStatus: string) => {
+    if (!user || !db) return;
+    const docRef = doc(db, 'users', user.uid, 'inventory', id);
+    updateDocumentNonBlocking(docRef, {
+      status: currentStatus === 'available' ? 'used' : 'available'
+    });
   };
 
   const handleWithdraw = (itemId: string, historyEntry: HistoryEntry) => {
-    setItems(currentItems => currentItems.map(item => {
-      if (item.id === itemId) {
-        if (item.profiles) {
-          const newUsed = (item.profilesUsed || 0) + 1;
-          const isFinished = newUsed >= item.profiles;
-          return {
-            ...item,
-            profilesUsed: newUsed,
-            status: isFinished ? 'used' : 'available'
-          } as InventoryItem;
-        } else {
-          return { ...item, status: 'used' } as InventoryItem;
-        }
-      }
-      return item;
-    }));
+    if (!user || !db) return;
+    const item = (items || []).find(i => i.id === itemId);
+    if (!item) return;
 
-    setHistory([historyEntry, ...history]);
+    // Atualiza item
+    const itemRef = doc(db, 'users', user.uid, 'inventory', itemId);
+    if (item.profiles) {
+      const newUsed = (item.profilesUsed || 0) + 1;
+      const isFinished = newUsed >= item.profiles;
+      updateDocumentNonBlocking(itemRef, {
+        profilesUsed: newUsed,
+        status: isFinished ? 'used' : 'available'
+      });
+    } else {
+      updateDocumentNonBlocking(itemRef, { status: 'used' });
+    }
+
+    // Adiciona ao histórico
+    const histRef = collection(db, 'users', user.uid, 'history');
+    const { id: _, ...histData } = historyEntry;
+    addDocumentNonBlocking(histRef, histData);
+  };
+
+  const updateServices = (newServices: string[]) => {
+    if (!user || !db) return;
+    const docRef = doc(db, 'users', user.uid, 'settings', 'services');
+    setDocumentNonBlocking(docRef, { names: newServices }, { merge: true });
   };
 
   const clearHistory = () => {
-    setHistory([]);
-    localStorage.removeItem('streamstock_history');
+    if (!user || !db) return;
+    // No Firestore, deletar tudo requer deletar cada doc (simplificado aqui)
+    history?.forEach(entry => {
+      const docRef = doc(db, 'users', user.uid, 'history', entry.id);
+      deleteDocumentNonBlocking(docRef);
+    });
   };
 
-  const filteredItems = items.filter(item => {
+  const filteredItems = (items || []).filter(item => {
     const matchesSearch = item.account.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.service.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || item.status === filterStatus;
@@ -149,7 +166,7 @@ export function InventoryManager() {
 
   const outOfStockServices = useMemo(() => {
     return services.filter(service => 
-      !items.some(item => item.service === service && item.status === 'available')
+      !(items || []).some(item => item.service === service && item.status === 'available')
     );
   }, [services, items]);
 
@@ -164,6 +181,15 @@ export function InventoryManager() {
     if (s.includes('crunchyroll')) return <Gamepad className="w-5 h-5" />;
     return <LayoutGrid className="w-5 h-5" />;
   };
+
+  if (itemsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Carregando estoque da nuvem...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
@@ -202,7 +228,7 @@ export function InventoryManager() {
             onClick={() => setIsWithdrawOpen(true)} 
             className="col-span-2 sm:flex-1 border-primary text-primary hover:bg-primary/5 h-11"
           >
-            <ExternalLink className="w-4 h-4 mr-2" />
+            <Plus className="w-4 h-4 mr-2" />
             Retirar Acesso
           </Button>
           <Button 
@@ -293,7 +319,7 @@ export function InventoryManager() {
                   </Badge>
                   {item.profiles && (
                     <Badge variant="outline" className="flex gap-1 items-center border-secondary/30 text-secondary text-[10px] px-2 py-0">
-                      <Users className="w-3 h-3" />
+                      <History className="w-3 h-3" />
                       {item.profilesUsed || 0}/{item.profiles}
                     </Badge>
                   )}
@@ -314,7 +340,7 @@ export function InventoryManager() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    onClick={() => toggleStatus(item.id)} 
+                    onClick={() => toggleStatus(item.id, item.status)} 
                     className="h-9 w-9"
                     title={item.status === 'available' ? 'Marcar como Usado' : 'Marcar como Disponível'}
                   >
@@ -345,24 +371,6 @@ export function InventoryManager() {
         ))}
       </div>
 
-      {filteredItems.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-xl border border-dashed mx-auto w-full max-w-lg px-4">
-          <div className="mx-auto bg-muted w-14 h-14 rounded-full flex items-center justify-center mb-4 text-muted-foreground">
-            <LayoutGrid className="w-7 h-7" />
-          </div>
-          <h3 className="text-lg font-medium">Nenhum item encontrado</h3>
-          <p className="text-sm text-muted-foreground mt-1">Refine sua busca ou adicione novos produtos ao estoque.</p>
-          <div className="flex flex-col sm:flex-row gap-2 justify-center mt-6">
-            <Button onClick={() => setIsWithdrawOpen(true)} variant="outline" className="h-11">
-              Retirar Acesso
-            </Button>
-            <Button onClick={() => setIsAddOpen(true)} className="h-11">
-              Adicionar Item
-            </Button>
-          </div>
-        </div>
-      )}
-
       <AddItemDialog 
         open={isAddOpen} 
         onOpenChange={setIsAddOpen} 
@@ -389,7 +397,7 @@ export function InventoryManager() {
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
         services={services}
-        onUpdateServices={setServices}
+        onUpdateServices={updateServices}
       />
 
       <HistoryDialog
