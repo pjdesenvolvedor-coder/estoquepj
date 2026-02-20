@@ -99,6 +99,7 @@ export function InventoryManager() {
   // Estados de Confirmação
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false);
 
   const handleLogout = () => {
     window.location.reload();
@@ -178,12 +179,14 @@ export function InventoryManager() {
     setDocumentNonBlocking(docRef, { names: newServices }, { merge: true });
   };
 
-  const clearHistory = () => {
+  const confirmClearHistory = () => {
     if (!user || !db) return;
     history.forEach(entry => {
       const docRef = doc(db, 'users', user.uid, 'history', entry.id);
       deleteDocumentNonBlocking(docRef);
     });
+    setShowClearHistoryConfirm(false);
+    setIsHistoryOpen(false);
     toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
   };
 
@@ -435,6 +438,23 @@ export function InventoryManager() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={showClearHistoryConfirm} onOpenChange={setShowClearHistoryConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar Histórico?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso removerá permanentemente todos os registros de vendas do seu histórico na nuvem.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClearHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Outros Diálogos */}
       <AddItemDialog 
         open={isAddOpen} 
@@ -469,7 +489,7 @@ export function InventoryManager() {
         open={isHistoryOpen}
         onOpenChange={setIsHistoryOpen}
         history={history}
-        onClearHistory={clearHistory}
+        onClearHistory={() => setShowClearHistoryConfirm(true)}
       />
 
       <StatsDialog
