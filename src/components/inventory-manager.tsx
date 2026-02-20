@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { InventoryItem, ServiceType } from '@/lib/types';
+import { InventoryItem, ServiceType, HistoryEntry } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +22,8 @@ import {
   Users,
   ExternalLink,
   Settings2,
-  AlertTriangle
+  AlertTriangle,
+  History
 } from 'lucide-react';
 import { 
   Card, 
@@ -34,6 +35,7 @@ import { AddItemDialog } from './add-item-dialog';
 import { EditItemDialog } from './edit-item-dialog';
 import { WithdrawAccessDialog } from './withdraw-access-dialog';
 import { SettingsDialog } from './settings-dialog';
+import { HistoryDialog } from './history-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const DEFAULT_SERVICES = ['Netflix', 'Disney+', 'HBO Max', 'Prime Video', 'Spotify', 'Youtube', 'Crunchyroll'];
@@ -41,11 +43,13 @@ const DEFAULT_SERVICES = ['Netflix', 'Disney+', 'HBO Max', 'Prime Video', 'Spoti
 export function InventoryManager() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [services, setServices] = useState<string[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
@@ -58,6 +62,9 @@ export function InventoryManager() {
     } else {
       setServices(DEFAULT_SERVICES);
     }
+
+    const savedHistory = localStorage.getItem('streamstock_history');
+    if (savedHistory) setHistory(JSON.parse(savedHistory));
   }, []);
 
   useEffect(() => {
@@ -67,6 +74,10 @@ export function InventoryManager() {
   useEffect(() => {
     localStorage.setItem('streamstock_services', JSON.stringify(services));
   }, [services]);
+
+  useEffect(() => {
+    localStorage.setItem('streamstock_history', JSON.stringify(history));
+  }, [history]);
 
   const handleLogout = () => {
     localStorage.removeItem('streamstock_auth');
@@ -100,7 +111,7 @@ export function InventoryManager() {
     ));
   };
 
-  const handleWithdraw = (itemId: string) => {
+  const handleWithdraw = (itemId: string, historyEntry: HistoryEntry) => {
     setItems(currentItems => currentItems.map(item => {
       if (item.id === itemId) {
         if (item.profiles) {
@@ -117,6 +128,13 @@ export function InventoryManager() {
       }
       return item;
     }));
+
+    setHistory([historyEntry, ...history]);
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem('streamstock_history');
   };
 
   const filteredItems = items.filter(item => {
@@ -203,31 +221,42 @@ export function InventoryManager() {
         </Alert>
       )}
 
-      {/* Status Filters - Fixed to prevent horizontal scroll issues */}
-      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar w-full">
+      {/* Status Filters and History Button */}
+      <div className="flex items-center justify-between gap-4 w-full">
+        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar w-full">
+          <Button 
+            variant={filterStatus === 'all' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setFilterStatus('all')}
+            className="whitespace-nowrap shrink-0"
+          >
+            Todos ({items.length})
+          </Button>
+          <Button 
+            variant={filterStatus === 'available' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setFilterStatus('available')}
+            className={`whitespace-nowrap shrink-0 ${filterStatus === 'available' ? 'bg-green-600 hover:bg-green-700 border-none' : ''}`}
+          >
+            Disponíveis ({items.filter(i => i.status === 'available').length})
+          </Button>
+          <Button 
+            variant={filterStatus === 'used' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setFilterStatus('used')}
+            className="whitespace-nowrap shrink-0"
+          >
+            Vendidos ({items.filter(i => i.status === 'used').length})
+          </Button>
+        </div>
         <Button 
-          variant={filterStatus === 'all' ? 'default' : 'outline'} 
-          size="sm"
-          onClick={() => setFilterStatus('all')}
-          className="whitespace-nowrap shrink-0"
+          variant="outline" 
+          size="sm" 
+          onClick={() => setIsHistoryOpen(true)}
+          className="shrink-0 h-9 border-primary/20 text-primary hover:bg-primary/5"
         >
-          Todos ({items.length})
-        </Button>
-        <Button 
-          variant={filterStatus === 'available' ? 'default' : 'outline'} 
-          size="sm"
-          onClick={() => setFilterStatus('available')}
-          className={`whitespace-nowrap shrink-0 ${filterStatus === 'available' ? 'bg-green-600 hover:bg-green-700 border-none' : ''}`}
-        >
-          Disponíveis ({items.filter(i => i.status === 'available').length})
-        </Button>
-        <Button 
-          variant={filterStatus === 'used' ? 'default' : 'outline'} 
-          size="sm"
-          onClick={() => setFilterStatus('used')}
-          className="whitespace-nowrap shrink-0"
-        >
-          Vendidos ({items.filter(i => i.status === 'used').length})
+          <History className="w-4 h-4 mr-2" />
+          Histórico
         </Button>
       </div>
 
@@ -352,6 +381,13 @@ export function InventoryManager() {
         onOpenChange={setIsSettingsOpen}
         services={services}
         onUpdateServices={setServices}
+      />
+
+      <HistoryDialog
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+        history={history}
+        onClearHistory={clearHistory}
       />
     </div>
   );

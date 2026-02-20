@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { InventoryItem } from '@/lib/types';
+import { InventoryItem, HistoryEntry } from '@/lib/types';
 import { Copy, AlertCircle, Sparkles, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,7 @@ interface WithdrawAccessDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   items: InventoryItem[];
-  onWithdraw: (id: string) => void;
+  onWithdraw: (id: string, historyEntry: HistoryEntry) => void;
   services: string[];
 }
 
@@ -60,13 +60,24 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, se
   };
 
   const handleCopyAndFinish = () => {
+    const item = items.find(i => i.id === selectedItemId);
+    if (!item) return;
+
     navigator.clipboard.writeText(generatedMessage).then(() => {
-      if (selectedItemId) {
-        onWithdraw(selectedItemId);
-      }
+      const historyEntry: HistoryEntry = {
+        id: crypto.randomUUID(),
+        itemId: item.id,
+        service: item.service,
+        account: item.account,
+        message: generatedMessage,
+        timestamp: Date.now()
+      };
+
+      onWithdraw(item.id, historyEntry);
+      
       toast({
         title: "Copiado!",
-        description: "Acesso retirado e estoque atualizado.",
+        description: "Acesso retirado e gravado no histórico.",
       });
       resetAndClose();
     }).catch(() => {

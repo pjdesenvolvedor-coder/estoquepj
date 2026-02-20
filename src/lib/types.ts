@@ -11,3 +11,12 @@ export interface InventoryItem {
   profilesUsed?: number;
   createdAt: number;
 }
+
+export interface HistoryEntry {
+  id: string;
+  itemId: string;
+  service: string;
+  account: string;
+  message: string;
+  timestamp: number;
+}
