@@ -1,0 +1,234 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { InventoryItem, ServiceType } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Trash2, 
+  Edit3, 
+  CheckCircle2, 
+  XCircle, 
+  Tv, 
+  MonitorPlay, 
+  Gamepad, 
+  Music, 
+  Youtube, 
+  LayoutGrid,
+  Sparkles,
+  LogOut
+} from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription 
+} from '@/components/ui/card';
+import { AddItemDialog } from './add-item-dialog';
+import { EditItemDialog } from './edit-item-dialog';
+import { AiEnhancerModal } from './ai-enhancer-modal';
+
+export function InventoryManager() {
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [enhancingItem, setEnhancingItem] = useState<InventoryItem | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('streamstock_items');
+    if (saved) setItems(JSON.parse(saved));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('streamstock_items', JSON.stringify(items));
+  }, [items]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('streamstock_auth');
+    window.location.reload();
+  };
+
+  const addItem = (item: Omit<InventoryItem, 'id' | 'createdAt'>) => {
+    const newItem: InventoryItem = {
+      ...item,
+      id: crypto.randomUUID(),
+      createdAt: Date.now(),
+    };
+    setItems([newItem, ...items]);
+  };
+
+  const updateItem = (updatedItem: InventoryItem) => {
+    setItems(items.map(item => item.id === updatedItem.id ? updatedItem : item));
+    setEditingItem(null);
+  };
+
+  const deleteItem = (id: string) => {
+    setItems(items.filter(item => item.id !== id));
+  };
+
+  const toggleStatus = (id: string) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, status: item.status === 'available' ? 'used' : 'available' } : item
+    ));
+  };
+
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.account.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          item.service.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || item.status === filterStatus;
+    return matchesSearch && matchesFilter;
+  });
+
+  const getServiceIcon = (service: ServiceType) => {
+    switch (service) {
+      case 'Netflix': return <MonitorPlay className="w-5 h-5" />;
+      case 'Disney+': return <Tv className="w-5 h-5" />;
+      case 'HBO Max': return <Tv className="w-5 h-5" />;
+      case 'Prime Video': return <MonitorPlay className="w-5 h-5" />;
+      case 'Spotify': return <Music className="w-5 h-5" />;
+      case 'Youtube': return <Youtube className="w-5 h-5" />;
+      case 'Crunchyroll': return <Gamepad className="w-5 h-5" />;
+      default: return <LayoutGrid className="w-5 h-5" />;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl shadow-sm border">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Buscar por conta ou serviço..." 
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="icon" onClick={handleLogout} title="Sair" className="shrink-0">
+            <LogOut className="w-4 h-4" />
+          </Button>
+          <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none">
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar Estoque
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        <Button 
+          variant={filterStatus === 'all' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => setFilterStatus('all')}
+        >
+          Todos ({items.length})
+        </Button>
+        <Button 
+          variant={filterStatus === 'available' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => setFilterStatus('available')}
+          className={filterStatus === 'available' ? 'bg-green-600 hover:bg-green-700 border-none' : ''}
+        >
+          Disponíveis ({items.filter(i => i.status === 'available').length})
+        </Button>
+        <Button 
+          variant={filterStatus === 'used' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => setFilterStatus('used')}
+        >
+          Vendidos/Usados ({items.filter(i => i.status === 'used').length})
+        </Button>
+      </div>
+
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {filteredItems.map((item) => (
+          <Card key={item.id} className={`group hover:shadow-md transition-all border-l-4 ${item.status === 'available' ? 'border-l-green-500' : 'border-l-gray-400 opacity-75'}`}>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                    {getServiceIcon(item.service)}
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-headline">{item.service}</CardTitle>
+                    <CardDescription className="font-mono text-xs">{item.account}</CardDescription>
+                  </div>
+                </div>
+                <Badge variant={item.status === 'available' ? 'default' : 'secondary'} className={item.status === 'available' ? 'bg-green-600' : ''}>
+                  {item.status === 'available' ? 'Disponível' : 'Vendido'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-muted p-3 rounded-md text-sm break-all font-mono">
+                <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Credenciais</p>
+                {item.credentials}
+              </div>
+              
+              {item.notes && (
+                <div className="text-sm italic text-muted-foreground border-l-2 border-secondary pl-2 py-1 bg-secondary/5 rounded-r-md">
+                  {item.notes}
+                </div>
+              )}
+
+              <div className="flex justify-between pt-2">
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => toggleStatus(item.id)} title={item.status === 'available' ? 'Marcar como Usado' : 'Marcar como Disponível'}>
+                    {item.status === 'available' ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <XCircle className="w-4 h-4 text-orange-400" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)} title="Editar">
+                    <Edit3 className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setEnhancingItem(item)} className="text-secondary hover:text-secondary" title="Melhorar Notas com IA">
+                    <Sparkles className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => deleteItem(item.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10" title="Excluir">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredItems.length === 0 && (
+        <div className="text-center py-20 bg-white rounded-xl border border-dashed">
+          <div className="mx-auto bg-muted w-16 h-16 rounded-full flex items-center justify-center mb-4 text-muted-foreground">
+            <LayoutGrid className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-medium">Nenhum item encontrado</h3>
+          <p className="text-muted-foreground">Tente mudar o filtro ou adicionar um novo produto.</p>
+          <Button onClick={() => setIsAddOpen(true)} className="mt-4" variant="outline">
+            Adicionar Primeiro Item
+          </Button>
+        </div>
+      )}
+
+      <AddItemDialog 
+        open={isAddOpen} 
+        onOpenChange={setIsAddOpen} 
+        onSubmit={addItem} 
+      />
+
+      <EditItemDialog 
+        item={editingItem} 
+        onOpenChange={(open) => !open && setEditingItem(null)} 
+        onSubmit={updateItem} 
+      />
+
+      <AiEnhancerModal 
+        item={enhancingItem} 
+        onOpenChange={(open) => !open && setEnhancingItem(null)} 
+        onUpdate={updateItem}
+      />
+    </div>
+  );
+}
