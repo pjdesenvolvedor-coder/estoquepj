@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -23,7 +23,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (password === FIXED_PASSWORD) {
       setIsAuthenticating(true);
       setError(false);
-      // Realiza o login no Firebase para persistência real no banco de dados
       initiateAnonymousSignIn(auth);
     } else {
       setError(true);
@@ -31,20 +30,24 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Se o usuário já estiver logado no Firebase, mostramos o conteúdo
+  // Se o usuário estiver carregando o estado de autenticação inicial
+  if (isUserLoading || isAuthenticating) {
+    // Apenas mostra o loader se não houver um usuário ainda
+    if (!user) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-muted/30">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+  }
+
+  // Se o usuário está logado, renderiza o app principal
   if (user) {
     return <>{children}</>;
   }
 
-  // Enquanto verifica o estado inicial do Firebase
-  if (isUserLoading || isAuthenticating) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
+  // Caso contrário, mostra a tela de login
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-[400px] shadow-2xl border-t-4 border-t-primary">

@@ -49,31 +49,34 @@ export function InventoryManager() {
   const { user } = useUser();
   const db = useFirestore();
   
+  // Queries memoizadas para evitar re-renderizações infinitas
   const inventoryQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'inventory'), orderBy('createdAt', 'desc'));
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'history'), orderBy('timestamp', 'desc'));
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const settingsRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, 'users', user.uid, 'settings', 'services');
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: rawItems, isLoading: itemsLoading } = useCollection<InventoryItem>(inventoryQuery);
   const { data: rawHistory, isLoading: historyLoading } = useCollection<HistoryEntry>(historyQuery);
   const { data: settingsDoc } = useDoc<any>(settingsRef);
 
-  const items = rawItems || [];
-  const history = rawHistory || [];
-  const services = settingsDoc?.names || DEFAULT_SERVICES;
+  const items = useMemo(() => rawItems || [], [rawItems]);
+  const history = useMemo(() => rawHistory || [], [rawHistory]);
+  const services = useMemo(() => settingsDoc?.names || DEFAULT_SERVICES, [settingsDoc]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
+  
+  // Estados dos Diálogos
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -105,7 +108,7 @@ export function InventoryManager() {
 
   const deleteItem = (id: string) => {
     if (!user || !db) return;
-    if (window.confirm('Tem certeza que deseja excluir esta conta?')) {
+    if (confirm('Tem certeza que deseja excluir esta conta?')) {
       const docRef = doc(db, 'users', user.uid, 'inventory', id);
       deleteDocumentNonBlocking(docRef);
     }
@@ -113,7 +116,7 @@ export function InventoryManager() {
 
   const clearInventory = () => {
     if (!user || !db || items.length === 0) return;
-    if (window.confirm('ATENÇÃO: Deseja apagar TODAS as contas do estoque? Esta ação não pode ser desfeita.')) {
+    if (confirm('ATENÇÃO: Deseja apagar TODAS as contas do estoque? Esta ação não pode ser desfeita.')) {
       items.forEach(item => {
         const docRef = doc(db, 'users', user.uid, 'inventory', item.id);
         deleteDocumentNonBlocking(docRef);
@@ -172,11 +175,9 @@ export function InventoryManager() {
     return matchesSearch && matchesFilter;
   });
 
-  const outOfStockServices = useMemo(() => {
-    return services.filter(service => 
-      !items.some(item => item.service === service && item.status === 'available')
-    );
-  }, [services, items]);
+  const outOfStockServices = services.filter(service => 
+    !items.some(item => item.service === service && item.status === 'available')
+  );
 
   const getServiceIcon = (service: ServiceType) => {
     const s = service.toLowerCase();
@@ -190,7 +191,7 @@ export function InventoryManager() {
     return <LayoutGrid className="w-5 h-5" />;
   };
 
-  if (itemsLoading) {
+  if (itemsLoading && items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -200,7 +201,7 @@ export function InventoryManager() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden pb-10">
       <div className="flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -214,18 +215,15 @@ export function InventoryManager() {
         
         <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full">
           <Button variant="outline" size="icon" onClick={handleLogout} title="Sair" className="h-11 w-full sm:w-11">
-            <LogOut className="w-4 h-4 mr-2 sm:mr-0" />
-            <span className="sm:hidden">Sair</span>
+            <LogOut className="w-4 h-4" />
           </Button>
           <Button variant="outline" size="icon" onClick={() => setIsSettingsOpen(true)} title="Configurações" className="h-11 w-full sm:w-11">
-            <Settings2 className="w-4 h-4 mr-2 sm:mr-0" />
-            <span className="sm:hidden">Configurar</span>
+            <Settings2 className="w-4 h-4" />
           </Button>
           <Button 
             variant="outline" 
             onClick={() => setIsStatsOpen(true)}
             className="h-11 w-full sm:w-auto border-secondary text-secondary hover:bg-secondary/5"
-            title="Quantidade em Estoque"
           >
             <BarChart3 className="w-4 h-4 mr-2" />
             Quantidade
@@ -234,7 +232,6 @@ export function InventoryManager() {
             variant="outline" 
             onClick={clearInventory}
             className="h-11 w-full sm:w-auto border-destructive text-destructive hover:bg-destructive/5"
-            title="Apagar Todo o Estoque"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Limpar Tudo
@@ -257,7 +254,7 @@ export function InventoryManager() {
         </div>
       </div>
 
-      {outOfStockServices.length > 0 && (
+      {outOfStockServices.length > 0 && searchTerm === '' && (
         <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle className="font-bold">Atenção!</AlertTitle>
@@ -384,6 +381,7 @@ export function InventoryManager() {
         ))}
       </div>
 
+      {/* Diálogos que abrem ao clicar nos botões */}
       <AddItemDialog 
         open={isAddOpen} 
         onOpenChange={setIsAddOpen} 
