@@ -67,15 +67,15 @@ export function AddItemDialog({ open, onOpenChange, onSubmit, services }: AddIte
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="account">E-mail</Label>
+              <Label htmlFor="account">E-mail ou CPF</Label>
               <Input 
                 id="account" 
                 className="h-11" 
                 value={account} 
                 onChange={(e) => setAccount(e.target.value)} 
                 required 
-                placeholder="email@exemplo.com"
-                type="email"
+                placeholder="Ex: email@exemplo.com ou CPF"
+                type="text"
               />
             </div>
 

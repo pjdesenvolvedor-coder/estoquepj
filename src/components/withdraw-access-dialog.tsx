@@ -45,7 +45,7 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, se
     const serviceDisplay = isSupport === 'yes' ? `${item.service} - SUPORTE` : item.service;
     
     let message = `🔴*${serviceDisplay}*🔴\n\n`;
-    message += `> *EMAIL:* ${item.account}\n`;
+    message += `> *ACESSO:* ${item.account}\n`;
     message += `> *SENHA:* ${item.credentials}\n`;
     
     if (item.profiles) {
@@ -175,7 +175,7 @@ export function WithdrawAccessDialog({ open, onOpenChange, items, onWithdraw, se
                 <RefreshCcw className="w-4 h-4 mr-2" />
                 Trocar Conta
               </Button>
-              <Button onClick={handleCopyAndFinish} className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 h-11">
+              <Button handleCopyAndFinish={handleCopyAndFinish} className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 h-11" onClick={handleCopyAndFinish}>
                 <Copy className="w-4 h-4 mr-2" />
                 Copiar e Baixar
               </Button>

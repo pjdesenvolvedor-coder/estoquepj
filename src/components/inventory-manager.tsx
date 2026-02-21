@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -107,14 +106,12 @@ export function InventoryManager() {
     if (!user || !db) return;
     const colRef = collection(db, 'users', user.uid, 'inventory');
     
-    // Preparar dados e remover campos 'undefined' para evitar erro no Firestore
     const data: any = {
       ...item,
       profilesUsed: 0,
       createdAt: Date.now(),
     };
     
-    // Limpeza de campos indefinidos
     Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
 
     addDocumentNonBlocking(colRef, data);
@@ -126,7 +123,6 @@ export function InventoryManager() {
     const docRef = doc(db, 'users', user.uid, 'inventory', updatedItem.id);
     const { id, ...data } = updatedItem as any;
     
-    // Limpeza de campos indefinidos antes de atualizar
     Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
 
     updateDocumentNonBlocking(docRef, data);
@@ -191,16 +187,13 @@ export function InventoryManager() {
   const confirmClearHistory = () => {
     if (!user || !db) return;
     
-    // Deleta os registros
     history.forEach(entry => {
       const docRef = doc(db, 'users', user.uid, 'history', entry.id);
       deleteDocumentNonBlocking(docRef);
     });
     
-    // Primeiro fecha a confirmação, depois fecha o histórico principal
     setShowClearHistoryConfirm(false);
     
-    // Pequeno atraso para o fechamento do alerta não bugar o fundo
     setTimeout(() => {
       setIsHistoryOpen(false);
       toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
@@ -387,7 +380,7 @@ export function InventoryManager() {
             <CardContent className="p-4 pt-2 space-y-4">
               <div className="bg-muted p-3 rounded-lg text-sm break-all font-mono space-y-3 border border-border/50 overflow-hidden">
                 <div className="space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">E-mail / Senha</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">E-mail ou CPF / Senha</p>
                   <p className="leading-tight break-all font-bold">{item.account}</p>
                   <p className="leading-tight break-all">{item.credentials}</p>
                 </div>

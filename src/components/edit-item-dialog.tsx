@@ -73,14 +73,14 @@ export function EditItemDialog({ item, onOpenChange, onSubmit, services }: EditI
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-account">E-mail</Label>
+              <Label htmlFor="edit-account">E-mail ou CPF</Label>
               <Input 
                 id="edit-account" 
                 className="h-11" 
                 value={account} 
                 onChange={(e) => setAccount(e.target.value)} 
                 required 
-                type="email"
+                type="text"
               />
             </div>
 
