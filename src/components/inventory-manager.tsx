@@ -106,18 +106,29 @@ export function InventoryManager() {
   const addItem = (item: Omit<InventoryItem, 'id' | 'createdAt'>) => {
     if (!user || !db) return;
     const colRef = collection(db, 'users', user.uid, 'inventory');
-    addDocumentNonBlocking(colRef, {
+    
+    // Preparar dados e remover campos 'undefined' para evitar erro no Firestore
+    const data: any = {
       ...item,
       profilesUsed: 0,
       createdAt: Date.now(),
-    });
+    };
+    
+    // Limpeza de campos indefinidos
+    Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
+
+    addDocumentNonBlocking(colRef, data);
     toast({ title: "Sucesso", description: "Item adicionado ao estoque." });
   };
 
   const updateItem = (updatedItem: InventoryItem) => {
     if (!user || !db) return;
     const docRef = doc(db, 'users', user.uid, 'inventory', updatedItem.id);
-    const { id, ...data } = updatedItem;
+    const { id, ...data } = updatedItem as any;
+    
+    // Limpeza de campos indefinidos antes de atualizar
+    Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
+
     updateDocumentNonBlocking(docRef, data);
     setEditingItem(null);
     toast({ title: "Atualizado", description: "Item atualizado com sucesso." });
@@ -186,9 +197,14 @@ export function InventoryManager() {
       deleteDocumentNonBlocking(docRef);
     });
     
+    // Primeiro fecha a confirmação, depois fecha o histórico principal
     setShowClearHistoryConfirm(false);
-    setIsHistoryOpen(false);
-    toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
+    
+    // Pequeno atraso para o fechamento do alerta não bugar o fundo
+    setTimeout(() => {
+      setIsHistoryOpen(false);
+      toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
+    }, 100);
   };
 
   const filteredItems = items.filter(item => {
