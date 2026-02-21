@@ -25,15 +25,13 @@ export function SettingsDialog({ open, onOpenChange, services, onUpdateServices 
   };
 
   const removeService = (serviceToRemove: string) => {
-    if (window.confirm(`Deseja realmente remover o serviço "${serviceToRemove}"?`)) {
-      onUpdateServices(services.filter(s => s !== serviceToRemove));
-    }
+    onUpdateServices(services.filter(s => s !== serviceToRemove));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-[400px] p-0 gap-0 overflow-hidden flex flex-col max-h-[90vh]">
-        <DialogHeader className="p-6 pb-2 shrink-0 border-b">
+      <DialogContent className="w-[95vw] sm:max-w-[450px] p-0 gap-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogHeader className="p-6 pb-2 shrink-0 border-b bg-white z-10">
           <DialogTitle className="flex items-center gap-2">
             <Settings2 className="w-5 h-5 text-primary" />
             Configurar Serviços
@@ -43,7 +41,7 @@ export function SettingsDialog({ open, onOpenChange, services, onUpdateServices 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-6 space-y-4 flex-1 flex flex-col overflow-hidden">
+        <div className="p-6 space-y-4 flex-1 flex flex-col min-h-0 overflow-hidden bg-muted/5">
           <div className="flex gap-2 shrink-0">
             <Input 
               placeholder="Novo serviço..." 
@@ -57,11 +55,11 @@ export function SettingsDialog({ open, onOpenChange, services, onUpdateServices 
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 border rounded-lg bg-muted/30">
-            <div className="space-y-1 p-3">
+          <ScrollArea className="flex-1 border rounded-lg bg-white shadow-inner">
+            <div className="space-y-2 p-3">
               {services.map((service) => (
-                <div key={service} className="flex items-center justify-between p-2 pl-3 bg-white rounded-md border shadow-sm">
-                  <span className="text-sm font-medium">{service}</span>
+                <div key={service} className="flex items-center justify-between p-3 bg-white rounded-md border shadow-sm group hover:border-primary/30 transition-colors">
+                  <span className="text-sm font-semibold">{service}</span>
                   <Button 
                     variant="ghost" 
                     size="icon" 
@@ -81,8 +79,8 @@ export function SettingsDialog({ open, onOpenChange, services, onUpdateServices 
           </ScrollArea>
         </div>
 
-        <DialogFooter className="p-6 pt-2 shrink-0 border-t bg-white">
-          <Button onClick={() => onOpenChange(false)} className="w-full h-11">Concluído</Button>
+        <DialogFooter className="p-6 pt-4 shrink-0 border-t bg-white">
+          <Button onClick={() => onOpenChange(false)} className="w-full h-11 shadow-md">Concluído</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
