@@ -32,8 +32,8 @@ export function SettingsDialog({ open, onOpenChange, services, onUpdateServices 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-[400px] p-4 sm:p-6 max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] sm:max-w-[400px] p-0 gap-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogHeader className="p-6 pb-2 shrink-0 border-b">
           <DialogTitle className="flex items-center gap-2">
             <Settings2 className="w-5 h-5 text-primary" />
             Configurar Serviços
@@ -43,8 +43,8 @@ export function SettingsDialog({ open, onOpenChange, services, onUpdateServices 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 py-4 overflow-hidden flex flex-col">
-          <div className="flex gap-2">
+        <div className="p-6 space-y-4 flex-1 flex flex-col overflow-hidden">
+          <div className="flex gap-2 shrink-0">
             <Input 
               placeholder="Novo serviço..." 
               value={newService}
@@ -57,8 +57,8 @@ export function SettingsDialog({ open, onOpenChange, services, onUpdateServices 
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 border rounded-lg p-1 bg-muted/30">
-            <div className="space-y-1 p-1">
+          <ScrollArea className="flex-1 border rounded-lg bg-muted/30">
+            <div className="space-y-1 p-3">
               {services.map((service) => (
                 <div key={service} className="flex items-center justify-between p-2 pl-3 bg-white rounded-md border shadow-sm">
                   <span className="text-sm font-medium">{service}</span>
@@ -81,7 +81,7 @@ export function SettingsDialog({ open, onOpenChange, services, onUpdateServices 
           </ScrollArea>
         </div>
 
-        <DialogFooter className="mt-4">
+        <DialogFooter className="p-6 pt-2 shrink-0 border-t bg-white">
           <Button onClick={() => onOpenChange(false)} className="w-full h-11">Concluído</Button>
         </DialogFooter>
       </DialogContent>

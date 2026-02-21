@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InventoryItem } from '@/lib/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface EditItemDialogProps {
   item: InventoryItem | null;
@@ -51,82 +52,85 @@ export function EditItemDialog({ item, onOpenChange, onSubmit, services }: EditI
 
   return (
     <Dialog open={!!item} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-[450px] p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] sm:max-w-[450px] p-0 gap-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogHeader className="p-6 pb-2 shrink-0">
           <DialogTitle>Editar Acesso</DialogTitle>
           <DialogDescription>Modifique os dados desta conta digital.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5 py-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-service">Serviço</Label>
-              <Select value={service} onValueChange={(val) => setService(val)}>
-                <SelectTrigger id="edit-service" className="h-11">
-                  <SelectValue placeholder="Selecione o serviço" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
+
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <ScrollArea className="flex-1 p-6 pt-2">
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-service">Serviço</Label>
+                <Select value={service} onValueChange={(val) => setService(val)}>
+                  <SelectTrigger id="edit-service" className="h-11">
+                    <SelectValue placeholder="Selecione o serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-account">E-mail ou CPF</Label>
+                <Input 
+                  id="edit-account" 
+                  className="h-11" 
+                  value={account} 
+                  onChange={(e) => setAccount(e.target.value)} 
+                  required 
+                  type="text"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-credentials">Senha</Label>
+                <Input 
+                  id="edit-credentials" 
+                  className="h-11" 
+                  value={credentials} 
+                  onChange={(e) => setCredentials(e.target.value)} 
+                  required 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status no Estoque</Label>
+                <Select value={status} onValueChange={(val) => setStatus(val as 'available' | 'used')}>
+                  <SelectTrigger id="edit-status" className="h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="available">Disponível</SelectItem>
+                    <SelectItem value="used">Vendido / Usado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Quantidade de Perfis</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[5, 6, 7].map((num) => (
+                    <Button
+                      key={num}
+                      type="button"
+                      variant={profiles === num ? 'default' : 'outline'}
+                      className="h-11"
+                      onClick={() => setProfiles(profiles === num ? undefined : num)}
+                    >
+                      {num}
+                    </Button>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-account">E-mail ou CPF</Label>
-              <Input 
-                id="edit-account" 
-                className="h-11" 
-                value={account} 
-                onChange={(e) => setAccount(e.target.value)} 
-                required 
-                type="text"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-credentials">Senha</Label>
-              <Input 
-                id="edit-credentials" 
-                className="h-11" 
-                value={credentials} 
-                onChange={(e) => setCredentials(e.target.value)} 
-                required 
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Status no Estoque</Label>
-              <Select value={status} onValueChange={(val) => setStatus(val as 'available' | 'used')}>
-                <SelectTrigger id="edit-status" className="h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="available">Disponível</SelectItem>
-                  <SelectItem value="used">Vendido / Usado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Quantidade de Perfis</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {[5, 6, 7].map((num) => (
-                  <Button
-                    key={num}
-                    type="button"
-                    variant={profiles === num ? 'default' : 'outline'}
-                    className="h-11"
-                    onClick={() => setProfiles(profiles === num ? undefined : num)}
-                  >
-                    {num}
-                  </Button>
-                ))}
+                </div>
               </div>
             </div>
-          </div>
+          </ScrollArea>
 
-          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">
+          <DialogFooter className="p-6 pt-2 shrink-0 flex flex-col sm:flex-row gap-2 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:flex-1 h-11">
               Cancelar
             </Button>
