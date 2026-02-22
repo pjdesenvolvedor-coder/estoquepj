@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Lock, LogIn, Loader2 } from 'lucide-react';
+import { Lock, LogIn, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 const FIXED_PASSWORD = 'Ae@1234Br';
-const MASTER_EMAIL = 'admin@streamstock.com'; // E-mail interno único para sincronização universal
+const MASTER_EMAIL = 'admin@streamstock.com';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -17,6 +17,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  // Força a saída se o usuário logado não for a conta mestre (limpa lixo de sessões anônimas antigas)
+  useEffect(() => {
+    if (user && user.email !== MASTER_EMAIL && !isUserLoading) {
+      signOut(auth);
+    }
+  }, [user, auth, isUserLoading]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +35,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         // Tenta entrar com a conta mestre única
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, FIXED_PASSWORD);
       } catch (err: any) {
-        // Se a conta mestre ainda não existir no Firebase (primeiro acesso do sistema), cria ela
-        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-email') {
+        // Se a conta mestre ainda não existir no Firebase, cria ela pela primeira vez
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
           try {
             await createUserWithEmailAndPassword(auth, MASTER_EMAIL, FIXED_PASSWORD);
           } catch (createErr) {
@@ -52,12 +59,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (isUserLoading || isAuthenticating) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="text-center space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground animate-pulse font-medium">Sincronizando com a Nuvem...</p>
+        </div>
       </div>
     );
   }
 
-  if (user) {
+  // Só permite entrar se o e-mail logado for exatamente o MASTER_EMAIL
+  if (user && user.email === MASTER_EMAIL) {
     return <>{children}</>;
   }
 
@@ -68,31 +79,36 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
             <Lock className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold font-headline">Acesso Restrito</CardTitle>
-          <CardDescription className="text-xs">Sistema StreamStock - Nuvem</CardDescription>
+          <CardTitle className="text-2xl font-bold font-headline">Acesso Universal</CardTitle>
+          <CardDescription className="text-xs uppercase tracking-widest font-bold text-primary/60">StreamStock Cloud</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
               <Input
                 type="password"
-                placeholder="Senha mestra..."
+                placeholder="Senha mestra de sincronização..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`h-12 text-center text-lg ${error ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                className={`h-12 text-center text-lg shadow-inner ${error ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 autoFocus
+                autoComplete="current-password"
               />
               {error && (
-                <p className="text-xs text-destructive font-medium text-center bg-destructive/5 py-1 rounded">
+                <div className="flex items-center justify-center gap-2 text-xs text-destructive font-medium bg-destructive/5 py-2 rounded border border-destructive/10">
+                  <AlertCircle className="w-4 h-4" />
                   Senha incorreta. Tente novamente.
-                </p>
+                </div>
               )}
             </div>
+            <p className="text-[10px] text-center text-muted-foreground px-4 leading-tight">
+              A senha correta vincula este dispositivo à sua conta global. Todos os dados serão sincronizados automaticamente.
+            </p>
           </CardContent>
           <CardFooter className="pb-8">
-            <Button type="submit" className="w-full h-12 text-lg font-semibold shadow-lg">
-              <LogIn className="w-5 h-5 mr-2" />
-              Entrar no Sistema
+            <Button type="submit" className="w-full h-12 text-lg font-semibold shadow-lg group">
+              <LogIn className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" />
+              Entrar e Sincronizar
             </Button>
           </CardFooter>
         </form>
