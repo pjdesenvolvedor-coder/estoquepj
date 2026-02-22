@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -10,7 +9,7 @@ import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const FIXED_PASSWORD = 'Ae@1234Br';
-const MASTER_EMAIL = 'admin@streamstock.com'; // E-mail interno para sincronização universal
+const MASTER_EMAIL = 'admin@streamstock.com'; // E-mail interno único para sincronização universal
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -26,11 +25,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       setError(false);
       
       try {
-        // Tenta entrar com a conta mestre
+        // Tenta entrar com a conta mestre única
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, FIXED_PASSWORD);
       } catch (err: any) {
-        // Se a conta não existir (primeiro acesso do sistema), cria ela
-        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        // Se a conta mestre ainda não existir no Firebase (primeiro acesso do sistema), cria ela
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-email') {
           try {
             await createUserWithEmailAndPassword(auth, MASTER_EMAIL, FIXED_PASSWORD);
           } catch (createErr) {
@@ -85,7 +84,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
               />
               {error && (
                 <p className="text-xs text-destructive font-medium text-center bg-destructive/5 py-1 rounded">
-                  Erro de acesso. Tente novamente.
+                  Senha incorreta. Tente novamente.
                 </p>
               )}
             </div>
