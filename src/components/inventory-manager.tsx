@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -49,16 +50,18 @@ import { SettingsDialog } from './settings-dialog';
 import { HistoryDialog } from './history-dialog';
 import { StatsDialog } from './stats-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { collection, doc, query, orderBy } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
+import { signOut } from 'firebase/auth';
 
 const DEFAULT_SERVICES = ['Netflix', 'Disney+', 'HBO Max', 'Prime Video', 'Spotify', 'Youtube', 'Crunchyroll'];
 
 export function InventoryManager() {
   const { user } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   
   const inventoryQuery = useMemoFirebase(() => {
@@ -99,20 +102,30 @@ export function InventoryManager() {
   const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false);
 
   const handleLogout = () => {
-    window.location.reload();
+    signOut(auth).then(() => {
+      window.location.reload();
+    });
+  };
+
+  const cleanData = (data: any) => {
+    const cleaned = { ...data };
+    Object.keys(cleaned).forEach(key => {
+      if (cleaned[key] === undefined) {
+        delete cleaned[key];
+      }
+    });
+    return cleaned;
   };
 
   const addItem = (item: Omit<InventoryItem, 'id' | 'createdAt'>) => {
     if (!user || !db) return;
     const colRef = collection(db, 'users', user.uid, 'inventory');
     
-    const data: any = {
+    const data = cleanData({
       ...item,
       profilesUsed: 0,
       createdAt: Date.now(),
-    };
-    
-    Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
+    });
 
     addDocumentNonBlocking(colRef, data);
     toast({ title: "Sucesso", description: "Item adicionado ao estoque." });
@@ -121,11 +134,9 @@ export function InventoryManager() {
   const updateItem = (updatedItem: InventoryItem) => {
     if (!user || !db) return;
     const docRef = doc(db, 'users', user.uid, 'inventory', updatedItem.id);
-    const { id, ...data } = updatedItem as any;
+    const { id, ...data } = updatedItem;
     
-    Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
-
-    updateDocumentNonBlocking(docRef, data);
+    updateDocumentNonBlocking(docRef, cleanData(data));
     setEditingItem(null);
     toast({ title: "Atualizado", description: "Item atualizado com sucesso." });
   };
@@ -175,7 +186,7 @@ export function InventoryManager() {
 
     const histRef = collection(db, 'users', user.uid, 'history');
     const { id: _, ...histData } = historyEntry;
-    addDocumentNonBlocking(histRef, histData);
+    addDocumentNonBlocking(histRef, cleanData(histData));
   };
 
   const updateServices = (newServices: string[]) => {
@@ -197,7 +208,7 @@ export function InventoryManager() {
     setTimeout(() => {
       setIsHistoryOpen(false);
       toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
-    }, 100);
+    }, 150);
   };
 
   const filteredItems = items.filter(item => {
@@ -238,7 +249,7 @@ export function InventoryManager() {
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Buscar e-mail ou serviço..." 
+            placeholder="Buscar e-mail, CPF ou serviço..." 
             className="pl-10 h-11 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -380,7 +391,7 @@ export function InventoryManager() {
             <CardContent className="p-4 pt-2 space-y-4">
               <div className="bg-muted p-3 rounded-lg text-sm break-all font-mono space-y-3 border border-border/50 overflow-hidden">
                 <div className="space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">E-mail ou CPF / Senha</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-sans font-bold">Conta / Senha</p>
                   <p className="leading-tight break-all font-bold">{item.account}</p>
                   <p className="leading-tight break-all">{item.credentials}</p>
                 </div>
@@ -444,7 +455,7 @@ export function InventoryManager() {
           <AlertDialogHeader>
             <AlertDialogTitle>Limpar TODO o estoque?</AlertDialogTitle>
             <AlertDialogDescription>
-              ATENÇÃO: Todas as contas cadastradas serão apagadas permanentemente. Esta ação é irreversível.
+              ATENÇÃO: Todas as contas cadastradas serão apagadas permanentemente na nuvem. Esta ação é irreversível.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -40,7 +40,7 @@
     }
   },
   "auth": {
-    "providers": ["anonymous"]
+    "providers": ["password"]
   },
   "firestore": {
     "/users/{userId}/inventory/{itemId}": {

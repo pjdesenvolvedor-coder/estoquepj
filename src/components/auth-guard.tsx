@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Lock, LogIn, Loader2 } from 'lucide-react';
 import { useAuth, useUser } from '@/firebase';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const FIXED_PASSWORD = 'Ae@1234Br';
+const MASTER_EMAIL = 'admin@streamstock.com'; // E-mail interno para sincronização universal
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -18,36 +19,49 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password === FIXED_PASSWORD) {
       setIsAuthenticating(true);
       setError(false);
-      initiateAnonymousSignIn(auth);
+      
+      try {
+        // Tenta entrar com a conta mestre
+        await signInWithEmailAndPassword(auth, MASTER_EMAIL, FIXED_PASSWORD);
+      } catch (err: any) {
+        // Se a conta não existir (primeiro acesso do sistema), cria ela
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          try {
+            await createUserWithEmailAndPassword(auth, MASTER_EMAIL, FIXED_PASSWORD);
+          } catch (createErr) {
+            console.error("Erro ao criar conta mestre:", createErr);
+            setError(true);
+          }
+        } else {
+          console.error("Erro de autenticação:", err);
+          setError(true);
+        }
+      } finally {
+        setIsAuthenticating(false);
+      }
     } else {
       setError(true);
       setPassword('');
     }
   };
 
-  // Se o usuário estiver carregando o estado de autenticação inicial
   if (isUserLoading || isAuthenticating) {
-    // Apenas mostra o loader se não houver um usuário ainda
-    if (!user) {
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-muted/30">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      );
-    }
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  // Se o usuário está logado, renderiza o app principal
   if (user) {
     return <>{children}</>;
   }
 
-  // Caso contrário, mostra a tela de login
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-[400px] shadow-2xl border-t-4 border-t-primary">
@@ -71,7 +85,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
               />
               {error && (
                 <p className="text-xs text-destructive font-medium text-center bg-destructive/5 py-1 rounded">
-                  Senha incorreta. Tente novamente.
+                  Erro de acesso. Tente novamente.
                 </p>
               )}
             </div>
