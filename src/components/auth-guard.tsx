@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Lock, LogIn, Loader2, AlertCircle, UserPlus } from 'lucide-react';
+import { Lock, LogIn, Loader2, AlertCircle, UserPlus, ShieldCheck } from 'lucide-react';
 import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -71,13 +71,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       <Card className="w-full max-w-[400px] shadow-2xl border-t-4 border-t-primary">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-            <Lock className="w-8 h-8 text-primary" />
+            <ShieldCheck className="w-8 h-8 text-primary" />
           </div>
           <CardTitle className="text-2xl font-bold font-headline">
-            {isLogin ? 'Entrar no Sistema' : 'Criar sua Conta'}
+            {isLogin ? 'Acessar Painel' : 'Criar Nova Conta'}
           </CardTitle>
           <CardDescription className="text-xs uppercase tracking-widest font-bold text-primary/60">
-            StreamStock Cloud
+            Sistema de Estoque Privado
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleAuth}>
@@ -112,12 +112,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
               {isLogin ? (
                 <>
                   <LogIn className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" />
-                  Entrar
+                  Entrar no Sistema
                 </>
               ) : (
                 <>
                   <UserPlus className="w-5 h-5 mr-2" />
-                  Começar agora
+                  Começar Agora
                 </>
               )}
             </Button>
@@ -130,7 +130,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                 setError('');
               }}
             >
-              {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Faça login'}
+              {isLogin ? 'Não tem conta? Cadastre-se agora' : 'Já possui uma conta? Faça login'}
             </Button>
           </CardFooter>
         </form>
