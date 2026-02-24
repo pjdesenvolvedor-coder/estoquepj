@@ -97,8 +97,8 @@ export function AddItemDialog({ open, onOpenChange, onSubmit, services }: AddIte
 
               <div className="space-y-2">
                 <Label>Quantidade de Perfis</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[5, 6, 7].map((num) => (
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7].map((num) => (
                     <Button
                       key={num}
                       type="button"
