@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -198,13 +197,17 @@ export function InventoryManager() {
   const confirmClearHistory = () => {
     if (!user || !db) return;
     
+    // Primeiro fecha o aviso de confirmação
+    setShowClearHistoryConfirm(false);
+    
+    // Deleta os registros
     history.forEach(entry => {
       const docRef = doc(db, 'users', user.uid, 'history', entry.id);
       deleteDocumentNonBlocking(docRef);
     });
     
-    setShowClearHistoryConfirm(false);
-    
+    // Aguarda um pequeno delay para a animação do diálogo de confirmação sair
+    // e então fecha o diálogo de histórico, limpando a tela
     setTimeout(() => {
       setIsHistoryOpen(false);
       toast({ title: "Histórico Limpo", description: "Todo o histórico foi apagado." });
@@ -245,6 +248,7 @@ export function InventoryManager() {
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden pb-10">
+      {/* Barra de Ferramentas Principal */}
       <div className="flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -433,6 +437,7 @@ export function InventoryManager() {
         ))}
       </div>
 
+      {/* Confirmações com AlertDialog para estabilidade */}
       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -484,6 +489,7 @@ export function InventoryManager() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Diálogos */}
       <AddItemDialog 
         open={isAddOpen} 
         onOpenChange={setIsAddOpen} 
